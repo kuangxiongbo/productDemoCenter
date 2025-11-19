@@ -1,4 +1,19 @@
+# 依赖包
 node_modules/
+
+# 运行时生成的文件
 custom-names.json
+version-history.json
+.versions/
+server.log
+
+# 系统文件
 .DS_Store
+*.log
+
+# 开发文档（可选，如果不需要可以删除）
+# README.md
+# UX设计方案.md
+# 部署文件清单.txt
+# 部署说明.md
 
