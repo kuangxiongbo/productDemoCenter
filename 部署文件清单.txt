@@ -1,0 +1,90 @@
+==========================================
+生产环境部署文件清单（Node.js版本）
+==========================================
+
+必需文件（核心代码）：
+---------
+1. server.js              - Node.js后端服务器（必需）
+2. package.json           - 项目依赖配置（必需）
+3. package-lock.json      - 锁定依赖版本（推荐，可选）
+4. index.html             - 前端页面（必需）
+5. script.js              - 前端JavaScript逻辑（必需）
+6. style.css              - 前端样式文件（必需）
+
+自动生成文件（首次运行后自动创建，无需上传）：
+-----------------------------------------
+- custom-names.json       - 自定义名称存储（首次编辑名称时自动创建）
+- version-history.json    - 版本历史记录（首次操作时自动创建）
+- .versions/              - 版本备份目录（首次上传文件时自动创建）
+- node_modules/           - 依赖包（在服务器上通过 npm install 安装）
+
+不需要上传的文件：
+---------------
+- server.log              - 服务器日志文件
+- README.md               - 说明文档
+- UX设计方案.md          - 设计文档
+- 部署文件清单.txt       - 本文件
+- 部署说明.md            - 部署说明
+- .git/                   - Git版本控制目录
+- .gitignore              - Git忽略文件
+- node_modules/           - 依赖包（在服务器上安装）
+
+部署步骤：
+---------
+1. 将必需文件上传到服务器（与需要展示的目录同级别）
+
+2. 在服务器上安装依赖：
+   cd /path/to/deployment
+   npm install
+
+3. 启动服务：
+   npm start
+   或
+   node server.js
+
+4. 配置进程管理（推荐使用 PM2）：
+   npm install -g pm2
+   pm2 start server.js --name "prototype-system"
+   pm2 save
+   pm2 startup
+
+5. 配置反向代理（Nginx示例）：
+   location / {
+       proxy_pass http://localhost:3000;
+       proxy_http_version 1.1;
+       proxy_set_header Upgrade $http_upgrade;
+       proxy_set_header Connection 'upgrade';
+       proxy_set_header Host $host;
+       proxy_cache_bypass $http_upgrade;
+   }
+
+部署位置示例：
+-----------
+/prototypes/
+├── server.js              ← 必需
+├── package.json           ← 必需
+├── package-lock.json      ← 推荐
+├── index.html             ← 必需
+├── script.js              ← 必需
+├── style.css              ← 必需
+├── custom-names.json      ← 自动生成（首次运行后）
+├── version-history.json   ← 自动生成（首次运行后）
+├── .versions/             ← 自动生成（首次上传后）
+├── node_modules/          ← 在服务器上安装
+├── prototype1/            ← 这些目录会被自动展示
+├── prototype2/
+└── prototype3/
+
+系统要求：
+---------
+- Node.js 12+ （推荐 Node.js 14+ 或更高版本）
+- npm 或 yarn
+- 端口 3000（可在 server.js 中修改 PORT 变量）
+
+注意事项：
+---------
+1. 确保服务器有写入权限（用于创建 custom-names.json、version-history.json 和 .versions/ 目录）
+2. 确保端口 3000 未被占用，或修改 server.js 中的 PORT 变量
+3. 生产环境建议使用 PM2 等进程管理工具
+4. 建议配置 Nginx/Apache 反向代理
+5. 定期备份 custom-names.json 和 version-history.json 文件

@@ -1,0 +1,22 @@
+{
+  "name": "homepage-folder-display",
+  "version": "1.0.0",
+  "description": "自动展示目录下文件夹的首页",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "homepage",
+    "folder",
+    "display"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "multer": "^2.0.2"
+  }
+}
