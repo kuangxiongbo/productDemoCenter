@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原型演示系统</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 顶部导航栏 -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>📁 原型演示系统</h1>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="搜索目录..." />
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <button class="refresh-btn" id="refreshBtn" title="刷新">🔄</button>
+                </div>
+            </div>
+            <!-- 面包屑导航 -->
+            <nav class="breadcrumb" id="breadcrumb">
+                <span class="breadcrumb-item active">首页</span>
+            </nav>
+        </header>
+
+        <!-- 主内容区：双栏布局 -->
+        <div class="main-content">
+            <!-- 左侧树形导航 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>目录导航</h2>
+                </div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>正在加载...</p>
+                </div>
+                <div class="tree-container" id="treeContainer">
+                    <!-- 树形导航将在这里生成 -->
+                </div>
+            </aside>
+
+            <!-- 右侧详情区 -->
+            <main class="content-area">
+                <div class="content-header">
+                    <h2 id="contentTitle">请选择目录</h2>
+                </div>
+                <div class="content-body" id="contentBody">
+                    <div class="empty-state">
+                        <p>👈 从左侧选择目录查看详情</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="error" id="error" style="display: none;">
+            <p>❌ 加载失败，请检查服务器是否正常运行</p>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
+

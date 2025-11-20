@@ -471,7 +471,8 @@ body {
     margin-left: auto; /* 将原型标记推到右侧 */
 }
 
-.prototype-edit-btn {
+.prototype-edit-btn,
+.prototype-delete-icon-btn {
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 6px;
@@ -492,7 +493,19 @@ body {
     transform: scale(1.1);
 }
 
-.prototype-edit-btn svg {
+.prototype-delete-icon-btn {
+    background: rgba(211, 47, 47, 0.2);
+    border-color: rgba(211, 47, 47, 0.4);
+}
+
+.prototype-delete-icon-btn:hover {
+    background: rgba(211, 47, 47, 0.3);
+    border-color: rgba(211, 47, 47, 0.6);
+    transform: scale(1.1);
+}
+
+.prototype-edit-btn svg,
+.prototype-delete-icon-btn svg {
     width: 16px;
     height: 16px;
     color: white;
@@ -560,6 +573,7 @@ body {
     display: flex;
     gap: 8px;
     flex-direction: row;
+    align-items: center;
 }
 
 .prototype-btn {
@@ -586,19 +600,80 @@ body {
     transform: scale(1.02);
 }
 
-.prototype-reupload-btn {
-    background: rgba(255, 193, 7, 0.3);
-    border-color: rgba(255, 193, 7, 0.5);
-}
-
-.prototype-reupload-btn:hover {
-    background: rgba(255, 193, 7, 0.4);
-    border-color: rgba(255, 193, 7, 0.7);
-}
-
 .prototype-btn svg {
     width: 16px;
     height: 16px;
+}
+
+/* 更多操作按钮和菜单 */
+.prototype-more-actions {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.prototype-more-btn {
+    flex: 0 0 auto;
+    min-width: 48px;
+    padding: 12px;
+}
+
+.prototype-more-menu {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 8px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 160px;
+    z-index: 100;
+    overflow: hidden;
+}
+
+.prototype-more-item {
+    width: 100%;
+    padding: 12px 16px;
+    background: white;
+    color: #333;
+    border: none;
+    border-radius: 0;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+}
+
+.prototype-more-item:first-child {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.prototype-more-item:last-child {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.prototype-more-item:hover {
+    background: #f5f5f5;
+}
+
+.prototype-more-item.prototype-more-delete {
+    color: #d32f2f;
+}
+
+.prototype-more-item.prototype-more-delete:hover {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.prototype-more-item svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 }
 
 /* 非原型目录列表样式 */

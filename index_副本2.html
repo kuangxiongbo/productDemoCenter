@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原型演示系统</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 顶部导航栏 -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                    <span class="logo-text">原型演示系统</span>
+                </h1>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="搜索原型和目录..." />
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <button class="upload-folder-btn" id="uploadFolderBtn" title="上传原型文件夹">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M9 14l3-3 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>上传原型文件夹</span>
+                    </button>
+                    <button class="refresh-btn" id="refreshBtn" title="刷新">
+                        <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 4V10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M23 20V14H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14L18.36 18.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主内容区：双栏布局 -->
+        <div class="main-content">
+            <!-- 左侧树形导航 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>目录导航</h2>
+                </div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>正在加载...</p>
+                </div>
+                <div class="tree-container" id="treeContainer">
+                    <!-- 树形导航将在这里生成 -->
+                </div>
+            </aside>
+
+            <!-- 右侧详情区 -->
+            <main class="content-area">
+                <div class="content-header">
+                    <h2 id="contentTitle">请选择目录</h2>
+                </div>
+                <div class="content-body" id="contentBody">
+                    <div class="empty-state">
+                        <p>👈 从左侧选择目录查看详情</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="error" id="error" style="display: none;">
+            <p>❌ 加载失败，请检查服务器是否正常运行</p>
+        </div>
+
+        <!-- 上传对话框 -->
+        <div class="upload-modal" id="uploadModal" style="display: none;">
+            <div class="upload-modal-content">
+                <div class="upload-modal-header">
+                    <h3>上传原型文件夹</h3>
+                    <button class="upload-modal-close" onclick="closeUploadDialog()">×</button>
+                </div>
+                <div class="upload-modal-body">
+                    <form id="uploadForm">
+                        <div class="upload-directory-selector">
+                            <label for="uploadDirectorySelect">上传到目录：</label>
+                            <select id="uploadDirectorySelect" name="targetPath" class="upload-directory-select">
+                                <option value="">根目录</option>
+                            </select>
+                        </div>
+                        <div class="upload-input-wrapper">
+                            <input type="file" id="uploadFileInput" name="files" webkitdirectory directory multiple required />
+                            <label for="uploadFileInput" class="upload-file-label">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M12 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M9 14l3-3 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span>选择文件夹</span>
+                            </label>
+                            <div class="upload-file-name" id="uploadFileName"></div>
+                        </div>
+                        <div class="upload-actions">
+                            <button type="button" class="upload-cancel-btn" onclick="closeUploadDialog()">取消</button>
+                            <button type="submit" class="upload-submit-btn">上传</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
+

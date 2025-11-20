@@ -436,6 +436,14 @@ async function showFolderDetail(folder) {
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </button>
+                            <button class="prototype-delete-icon-btn" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}')" title="删除原型">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
                         </div>
                         ${(() => {
                             const path = proto.relativePath || getPrototypePath(proto.path);
@@ -444,17 +452,28 @@ async function showFolderDetail(folder) {
                         <p class="prototype-time">${formatDate(proto.modified)}</p>
                     </div>
                     <div class="prototype-card-footer">
-                        <button class="prototype-btn prototype-reupload-btn" onclick="showReuploadDialog('${proto.path}')" title="重新上传文件">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            重新上传
-                        </button>
                         <button class="prototype-btn" onclick="window.open('${proto.indexFile}', '_blank')">
                             打开演示
                         </button>
+                        <div class="prototype-more-actions">
+                            <button class="prototype-btn prototype-more-btn" onclick="toggleMoreActions(this)" title="更多操作">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+                                    <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                                    <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+                                </svg>
+                            </button>
+                            <div class="prototype-more-menu" style="display: none;">
+                                <button class="prototype-more-item" onclick="showReuploadDialog('${proto.path}'); closeMoreActions(this);" title="重新上传文件">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    重新上传
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -732,6 +751,14 @@ function showAllPrototypes(prototypes) {
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </button>
+                        <button class="prototype-delete-icon-btn" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}')" title="删除原型">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
                     </div>
                     ${(() => {
                         const path = proto.relativePath || getPrototypePath(proto.path);
@@ -984,6 +1011,14 @@ function setupSearch() {
                                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                             </svg>
                                         </button>
+                                        <button class="prototype-delete-icon-btn" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}')" title="删除原型">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </button>
                                     </div>
                                     ${(() => {
                             const path = proto.relativePath || getPrototypePath(proto.path);
@@ -1208,6 +1243,94 @@ async function deleteFolder(folderPath) {
     } catch (err) {
         console.error('删除目录失败:', err);
         alert('删除目录失败，请重试');
+    }
+}
+
+// 删除原型
+async function deletePrototype(prototypePath, prototypeName) {
+    const confirmMsg = `确定要删除原型 "${prototypeName}" 吗？\n\n此操作将删除整个原型目录及其所有内容，且无法恢复！\n\n删除后可以通过版本历史恢复。`;
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/folders/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                folderPath: prototypePath
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('原型删除成功！');
+            // 重新加载树和内容
+            await loadTree();
+            // 如果删除的是当前显示的原型，显示首页
+            if (currentPath === prototypePath || currentPath === null) {
+                await showRootContent();
+            } else {
+                // 重新显示当前目录
+                const activeNode = document.querySelector('.tree-node-item.active');
+                if (activeNode && activeNode.dataset.path !== 'home') {
+                    const folder = {
+                        name: activeNode.querySelector('.tree-node-name').textContent,
+                        displayName: activeNode.querySelector('.tree-node-name').textContent,
+                        path: activeNode.dataset.path,
+                        hasIndex: false,
+                        indexFile: null
+                    };
+                    await showFolderDetail(folder);
+                } else {
+                    await showRootContent();
+                }
+            }
+        } else {
+            alert('删除失败：' + (data.error || '未知错误'));
+        }
+    } catch (err) {
+        console.error('删除原型失败:', err);
+        alert('删除原型失败，请重试');
+    }
+}
+
+// 切换更多操作菜单
+function toggleMoreActions(btn) {
+    const menu = btn.nextElementSibling;
+    const isVisible = menu.style.display !== 'none';
+    
+    // 关闭所有其他菜单
+    document.querySelectorAll('.prototype-more-menu').forEach(m => {
+        if (m !== menu) {
+            m.style.display = 'none';
+        }
+    });
+    
+    // 切换当前菜单
+    menu.style.display = isVisible ? 'none' : 'block';
+    
+    // 点击外部关闭菜单
+    if (!isVisible) {
+        setTimeout(() => {
+            const closeHandler = (e) => {
+                if (!menu.contains(e.target) && !btn.contains(e.target)) {
+                    menu.style.display = 'none';
+                    document.removeEventListener('click', closeHandler);
+                }
+            };
+            document.addEventListener('click', closeHandler);
+        }, 0);
+    }
+}
+
+// 关闭更多操作菜单
+function closeMoreActions(btn) {
+    const menu = btn.closest('.prototype-more-menu');
+    if (menu) {
+        menu.style.display = 'none';
     }
 }
 
@@ -1506,17 +1629,41 @@ function setupUploadForm() {
         } else {
             // 文件夹上传模式：保留文件夹结构
             const filePaths = [];
+            const directoryPaths = new Set(); // 用于收集所有需要创建的目录路径
+            
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 // webkitRelativePath 格式：folderName/subfolder/file.html
                 const relativePath = file.webkitRelativePath || file.name;
                 console.log(`文件 ${i + 1}: name="${file.name}", webkitRelativePath="${file.webkitRelativePath}", 使用路径="${relativePath}"`);
                 
+                // 传递完整的相对路径（包含文件夹名称和子目录）
                 formData.append('files', file, relativePath);
                 filePaths.push(relativePath);
+                
+                // 提取所有需要创建的目录路径（支持多层级，如 sub1/sub2/sub3）
+                if (relativePath.includes('/') || relativePath.includes('\\')) {
+                    const normalizedPath = relativePath.replace(/\\/g, '/');
+                    const parts = normalizedPath.split('/');
+                    // 去掉第一层（文件夹名称，已拼接到targetPath）和最后一部分（文件名）
+                    const dirParts = parts.slice(1, -1);
+                    // 逐层构建目录路径（确保所有层级的目录都被收集）
+                    // 例如：folderName/sub1/sub2/sub3/file.html
+                    // 需要收集：sub1, sub1/sub2, sub1/sub2/sub3
+                    let currentDir = '';
+                    for (const dir of dirParts) {
+                        currentDir = currentDir ? `${currentDir}/${dir}` : dir;
+                        directoryPaths.add(currentDir);
+                        console.log(`[前端] 收集目录路径: ${currentDir} (来自: ${relativePath})`);
+                    }
+                }
             }
+            
             // 将路径信息作为 JSON 字符串传递
             formData.append('filePaths', JSON.stringify(filePaths));
+            // 传递所有需要创建的目录路径（相对于上传文件夹根目录）
+            formData.append('directoryPaths', JSON.stringify(Array.from(directoryPaths)));
+            console.log(`[前端] 需要创建的目录路径:`, Array.from(directoryPaths));
         }
         
         console.log(`[前端] 准备上传 ${files.length} 个文件`);
