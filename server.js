@@ -23,11 +23,22 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// 静态文件服务（根目录，但排除敏感文件）
-app.use(express.static('.', {
-  dotfiles: 'ignore', // 忽略隐藏文件
-  index: 'index.html' // 默认首页
-}));
+// 路径修正：将错误的 pages 路径重定向到正确的 page 路径
+// 必须在静态文件服务之前执行，这样才能拦截错误的路径
+app.use((req, res, next) => {
+  // 检查路径中是否包含 /pages/，如果存在且对应的 /page/ 路径存在，则重定向
+  if (req.path.includes('/pages/')) {
+    const correctedPath = req.path.replace('/pages/', '/page/');
+    const fullCorrectedPath = path.join(__dirname, correctedPath);
+    
+    // 如果修正后的路径存在，则重定向
+    if (fs.existsSync(fullCorrectedPath)) {
+      console.log(`[路径修正] ${req.path} -> ${correctedPath}`);
+      return res.redirect(301, correctedPath);
+    }
+  }
+  next();
+});
 
 // 排除版本备份目录
 app.use((req, res, next) => {
@@ -36,6 +47,12 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// 静态文件服务（根目录，但排除敏感文件）
+app.use(express.static('.', {
+  dotfiles: 'ignore', // 忽略隐藏文件
+  index: 'index.html' // 默认首页
+}));
 
 // 自定义名称存储文件路径
 const CUSTOM_NAMES_FILE = path.join(__dirname, 'custom-names.json');
@@ -304,6 +321,11 @@ function recordVersionChange(action, details) {
       if (fileInfo.path) {
         const backupInfo = backupFile(fileInfo.path, versionId);
         if (backupInfo) {
+          // 保存原始相对路径（如果存在），用于恢复时保持原始目录结构
+          if (fileInfo.originalName) {
+            backupInfo.originalRelativePath = fileInfo.originalName;
+            console.log(`[recordVersionChange] 保存原始相对路径: ${fileInfo.originalName}`);
+          }
           backedFiles.push(backupInfo);
         }
       }
@@ -458,12 +480,16 @@ function getSubDirectories(dir) {
         const dirName = item.name;
         const indexFile = hasIndexFile(itemPath);
         
-        // 计算相对路径（相对于项目根目录）
+        // 计算相对路径（相对于项目根目录），确保以 / 开头以便浏览器正确访问
         const currentDir = __dirname;
         let relativePath = null;
         if (indexFile) {
           const fullIndexPath = path.join(itemPath, indexFile);
           relativePath = path.relative(currentDir, fullIndexPath).replace(/\\/g, '/');
+          // 确保路径以 / 开头，这样浏览器才能正确访问
+          if (!relativePath.startsWith('/')) {
+            relativePath = '/' + relativePath;
+          }
         }
         
         const customNames = loadCustomNames();
@@ -569,7 +595,8 @@ app.get('/api/folders', (req, res) => {
         
         // 检查是否有首页文件
         const indexFile = hasIndexFile(folderPath);
-        const relativePath = indexFile ? `${dirName}/${indexFile}` : null;
+        // 确保路径以 / 开头，这样浏览器才能正确访问
+        const relativePath = indexFile ? `/${dirName}/${indexFile}` : null;
         
         // 规范化路径，确保与保存时使用的key一致
         const normalizedPath = path.resolve(folderPath);
@@ -965,7 +992,14 @@ app.post('/api/folders/check', (req, res) => {
     }
     
     const indexFile = hasIndexFile(folderPath);
-    const relativePath = indexFile ? path.relative(currentDir, path.join(folderPath, indexFile)).replace(/\\/g, '/') : null;
+    let relativePath = null;
+    if (indexFile) {
+      relativePath = path.relative(currentDir, path.join(folderPath, indexFile)).replace(/\\/g, '/');
+      // 确保路径以 / 开头，这样浏览器才能正确访问
+      if (!relativePath.startsWith('/')) {
+        relativePath = '/' + relativePath;
+      }
+    }
     
     res.json({
       success: true,
@@ -983,26 +1017,19 @@ app.post('/api/folders/check', (req, res) => {
 // 后端需要从 originalname 中提取路径信息并创建对应的目录结构
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const { targetPath, filePaths, isReupload } = req.body;
-    let uploadPath = __dirname;
+    // 按照设计方案：所有文件先保存到目标根目录，后续统一处理
+    let targetPath, isReupload;
     
-    // 调试：打印接收到的文件信息和targetPath
-    console.log(`[destination] ========== 开始处理文件 ==========`);
-    console.log(`[destination] originalname="${file.originalname}"`);
-    console.log(`[destination] originalname 编码: ${Buffer.from(file.originalname, 'utf8').toString('hex')}`);
-    console.log(`[destination] fieldname="${file.fieldname}"`);
-    console.log(`[destination] isReupload="${isReupload}"`);
-    console.log(`[destination] targetPath="${targetPath}" (类型: ${typeof targetPath}, 是否为空: ${!targetPath || targetPath.trim() === ''})`);
-    console.log(`[destination] filePaths 类型: ${typeof filePaths}, 是否为数组: ${Array.isArray(filePaths)}`);
-    if (filePaths && typeof filePaths === 'string') {
-      console.log(`[destination] filePaths 字符串内容: ${filePaths.substring(0, 200)}...`);
-    } else if (Array.isArray(filePaths)) {
-      console.log(`[destination] filePaths 数组长度: ${filePaths.length}, 前3个:`, filePaths.slice(0, 3));
+    // 尝试从 req.body 获取（如果已解析）
+    if (req.body) {
+      targetPath = req.body.targetPath;
+      isReupload = req.body.isReupload;
     }
     
-    // 如果是重新上传模式，直接保存到目标目录，不创建文件夹结构
+    let uploadPath = __dirname;
+    
+    // 如果是重新上传模式，直接保存到目标目录
     if (isReupload === 'true' || isReupload === true) {
-      // 重新上传：直接保存到目标目录
       if (targetPath && targetPath.trim() !== '') {
         const resolvedPath = path.resolve(targetPath);
         const resolvedCurrentDir = path.resolve(__dirname);
@@ -1015,7 +1042,6 @@ const storage = multer.diskStorage({
           if (!fs.existsSync(uploadPath)) {
             try {
               fs.mkdirSync(uploadPath, { recursive: true });
-              console.log(`[destination] ✓ 创建目标目录: ${uploadPath}`);
             } catch (err) {
               console.error(`[destination] ✗ 创建目标目录失败: ${err.message}`);
               return cb(err);
@@ -1023,12 +1049,10 @@ const storage = multer.diskStorage({
           }
         }
       }
-      
-      console.log(`[destination] 重新上传模式，文件保存到: ${uploadPath}`);
       return cb(null, uploadPath);
     }
     
-    // 如果指定了目标路径，使用该路径
+    // 文件夹上传模式：所有文件先保存到目标根目录
     if (targetPath && targetPath.trim() !== '') {
       const resolvedPath = path.resolve(targetPath);
       const resolvedCurrentDir = path.resolve(__dirname);
@@ -1039,200 +1063,40 @@ const storage = multer.diskStorage({
       }
     }
     
-    // 无论是否指定了targetPath，都确保uploadPath存在
-    // 如果targetPath为空，uploadPath默认是__dirname（根目录）
+    // 确保目标目录存在
     if (!fs.existsSync(uploadPath)) {
       try {
         fs.mkdirSync(uploadPath, { recursive: true });
-        console.log(`[destination] ✓ 创建目标目录: ${uploadPath}`);
       } catch (err) {
         console.error(`[destination] ✗ 创建目标目录失败: ${err.message}`);
         return cb(err);
       }
-    } else {
-      console.log(`[destination] 目标目录已存在: ${uploadPath}`);
     }
     
-    console.log(`[destination] 目标上传路径: ${uploadPath}`);
-    
-    // 尝试从 filePaths 数组中获取正确的路径（如果 originalname 不包含路径）
-    let relativePath = file.originalname;
-    
-    // 解析 filePaths（如果存在且是字符串）
-    let parsedFilePaths = filePaths;
-    if (filePaths && typeof filePaths === 'string') {
-      try {
-        parsedFilePaths = JSON.parse(filePaths);
-        console.log(`[destination] 解析 filePaths 字符串:`, parsedFilePaths);
-      } catch (e) {
-        console.warn(`[destination] 解析 filePaths 失败:`, e.message);
-      }
-    }
-    
-    // 优先使用 filePaths 中的路径（更可靠）
-    // 注意：前端传递的 filePaths 是完整的相对路径（如 "folderName/subfolder/file.html"）
-    // 注意：在 destination 函数执行时，req.files 可能还没有完全构建，所以不能使用 indexOf
-    // 应该直接使用 file.originalname，因为前端已经通过 formData.append('files', file, relativePath) 传递了完整路径
-    if (parsedFilePaths && Array.isArray(parsedFilePaths)) {
-      // 优先使用 file.originalname（前端已经通过 formData.append 的第三个参数设置了完整路径）
-      // 如果 originalname 包含路径信息，直接使用
-      if (file.originalname && (file.originalname.includes('/') || file.originalname.includes('\\'))) {
-        // 尝试在 filePaths 中查找匹配的路径（通过文件名匹配）
-        const fileName = path.basename(file.originalname);
-        let matchedPath = parsedFilePaths.find(p => {
-          const pFileName = path.basename(p);
-          return pFileName === fileName;
-        });
-        if (matchedPath) {
-          relativePath = matchedPath;
-          console.log(`[destination] 从 filePaths 找到匹配路径: ${relativePath} (文件名: ${fileName})`);
-        } else {
-          // 如果找不到，直接使用 originalname（前端已经设置了完整路径）
-          relativePath = file.originalname;
-          console.log(`[destination] 使用 originalname 作为路径: ${relativePath}`);
-        }
-      } else {
-        // originalname 不包含路径，尝试根据文件名在 filePaths 中查找
-        const fileName = file.originalname;
-        let matchedPath = parsedFilePaths.find(p => {
-          const pFileName = path.basename(p);
-          return pFileName === fileName || p.endsWith('/' + fileName) || p.endsWith('\\' + fileName) || p === fileName;
-        });
-        if (matchedPath) {
-          relativePath = matchedPath;
-          console.log(`[destination] 从 filePaths 找到匹配路径: ${relativePath} (文件名: ${fileName})`);
-        } else {
-          console.log(`[destination] 在 filePaths 中未找到匹配路径，使用 originalname: ${file.originalname}`);
-        }
-      }
-    }
-    
-    // 文件夹上传时，originalname 或 relativePath 包含相对路径（如 "folderName/subfolder/file.html"）
-    // 前端已经将文件夹名称拼接到targetPath了，所以这里需要去掉webkitRelativePath的第一层文件夹名称
-    console.log(`[destination] 检查 relativePath: "${relativePath}"`);
-    if (relativePath && (relativePath.includes('/') || relativePath.includes('\\'))) {
-      // 统一使用正斜杠处理
-      const normalizedPath = relativePath.replace(/\\/g, '/');
-      const parts = normalizedPath.split('/').filter(p => p); // 过滤空字符串
-      
-      console.log(`[destination] 路径解析: normalizedPath="${normalizedPath}", parts=`, parts);
-      
-      if (parts.length > 1) {
-        // 第一层是文件夹名称（用户选择的文件夹本身），前端已经将其拼接到targetPath了
-        // 所以这里需要去掉第一层，只保留子目录和文件名
-        const subDirs = parts.slice(1, -1); // 中间路径（子目录），去掉第一层文件夹名称和最后的文件名
-        const fileName = parts[parts.length - 1]; // 文件名
-        
-        console.log(`[destination] 原始路径: "${normalizedPath}"`);
-        console.log(`[destination] 第一层文件夹名称: "${parts[0]}" (已包含在 targetPath 中)`);
-        console.log(`[destination] 子目录数组: [${subDirs.join(', ')}], 文件名: "${fileName}"`);
-        console.log(`[destination] uploadPath (已包含文件夹名称): "${uploadPath}"`);
-        
-        // 由于targetPath已经包含了文件夹名称，uploadPath就是最终的目标目录
-        // 需要逐层创建所有子目录（支持多层级，如 sub1/sub2/sub3）
-        let fullPath = uploadPath;
-        if (subDirs.length > 0) {
-          // 逐层创建子目录，确保每一层都被创建（支持任意层级深度）
-          for (const dir of subDirs) {
-            fullPath = path.join(fullPath, dir);
-            // 确保目录存在（使用 recursive: true 可以一次性创建多层级，但这里逐层创建更安全）
-            if (!fs.existsSync(fullPath)) {
-              try {
-                fs.mkdirSync(fullPath, { recursive: true });
-                console.log(`[destination] ✓ 成功创建子目录: ${fullPath}`);
-              } catch (err) {
-                console.error(`[destination] ✗ 创建子目录失败 ${fullPath}: ${err.message}`);
-                return cb(err);
-              }
-            } else {
-              console.log(`[destination] 子目录已存在: ${fullPath}`);
-            }
-          }
-        }
-        
-        // 返回文件应该保存的目录（确保路径与原始相对路径结构一致）
-        // 最终路径应该是: targetPath + 子目录路径 + 文件名
-        console.log(`[destination] ✓ 文件将保存到目录: ${fullPath}`);
-        console.log(`[destination] ✓ 文件名: ${fileName}`);
-        console.log(`[destination] ✓ 完整文件路径将是: ${path.join(fullPath, fileName)}`);
-        console.log(`[destination] ========== 文件处理完成 ==========`);
-        cb(null, fullPath);
-      } else {
-        // 只有文件名，直接保存到目标路径
-        console.log(`[destination] 只有文件名，保存到: ${uploadPath}`);
-        cb(null, uploadPath);
-      }
-    } else {
-      // 单个文件上传，直接保存到目标路径
-      console.log(`[destination] 单个文件上传，保存到: ${uploadPath}`);
-      cb(null, uploadPath);
-    }
+    // 所有文件先保存到这里，后续在 /api/upload 中统一处理
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    // 如果是文件夹上传，originalname 包含完整路径（如 "folderName/subfolder/file.html"）
-    // 只取最后一部分作为文件名
-    let fileName;
-    if (file.originalname && (file.originalname.includes('/') || file.originalname.includes('\\'))) {
-      // 统一使用正斜杠处理
-      const normalizedPath = file.originalname.replace(/\\/g, '/');
-      const parts = normalizedPath.split('/');
-      fileName = parts[parts.length - 1]; // 最后是文件名
-    } else {
-      fileName = file.originalname || 'unnamed';
-    }
+    // 按照设计方案：使用文件索引作为临时文件名，避免冲突
+    // 前端传递格式：file_0, file_1, file_2...
     
-    console.log(`[filename] 接收到的originalname: "${fileName}"`);
-    console.log(`[filename] originalname hex: ${Buffer.from(fileName, 'utf8').toString('hex')}`);
-    
-    // 关键问题：multer/busboy在解析multipart/form-data时，如果文件名包含非ASCII字符
-    // 可能会被错误地以latin1编码解析，导致乱码
-    // 解决方案：检查文件名是否包含乱码字符，如果是，尝试从latin1修复为UTF-8
-    
-    // 检测乱码模式：如果文件名包含常见的乱码字符（å, æ, ¬, ¯等），可能是被错误编码了
-    // 这是典型的双重编码问题：UTF-8字节序列被错误地当作latin1字符，然后再次UTF-8编码
-    const mojibakePattern = /[åæ¬¯]/;
-    if (mojibakePattern.test(fileName)) {
-      console.warn(`[filename] 检测到可能的乱码字符，尝试修复...`);
-      try {
-        // 方法：将乱码字符串先转换为latin1字节，再解码为UTF-8
-        // 这可以修复双重编码问题
-        const latin1Bytes = Buffer.from(fileName, 'latin1');
-        const fixedName = latin1Bytes.toString('utf8');
-        
-        // 验证修复后的文件名是否包含中文字符（更可能是正确的）
-        const hasChinese = /[\u4e00-\u9fa5]/.test(fixedName);
-        const stillHasMojibake = mojibakePattern.test(fixedName);
-        
-        if (hasChinese && !stillHasMojibake && fixedName !== fileName) {
-          console.log(`[filename] ✓ 修复成功: "${fileName}" -> "${fixedName}"`);
-          fileName = fixedName;
-        } else {
-          console.warn(`[filename] 修复未改善或仍包含乱码字符`);
-        }
-      } catch (fixErr) {
-        console.warn(`[filename] 修复过程出错:`, fixErr);
+    // 从 fieldname 提取索引（前端传递了 file_0, file_1 格式）
+    let index = 0;
+    if (file.fieldname && /^file_\d+$/.test(file.fieldname)) {
+      const match = file.fieldname.match(/file_(\d+)/);
+      if (match) {
+        index = parseInt(match[1], 10);
       }
     }
     
-    // 处理URL编码（如果文件名被URL编码了）
-    if (fileName.includes('%')) {
-      try {
-        let decoded = fileName;
-        let previousDecoded = '';
-        while (previousDecoded !== decoded && decoded.includes('%')) {
-          previousDecoded = decoded;
-          decoded = decodeURIComponent(decoded);
-        }
-        fileName = decoded;
-        console.log(`[filename] URL解码后: "${fileName}"`);
-      } catch (err) {
-        console.warn(`[filename] URL解码失败: ${err.message}`);
-      }
-    }
+    // 使用索引和时间戳确保唯一性
+    // 临时文件名格式：temp_索引_时间戳_随机字符串
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const tempFileName = `temp_${index}_${timestamp}_${randomStr}`;
     
-    // 最终文件名
-    console.log(`[filename] 最终文件名: "${fileName}" (hex: ${Buffer.from(fileName, 'utf8').toString('hex')})`);
-    cb(null, fileName);
+    console.log(`[filename] fieldname: "${file.fieldname}", 提取的索引: ${index}, 临时文件名: "${tempFileName}"`);
+    cb(null, tempFileName);
   }
 });
 
@@ -1275,34 +1139,58 @@ app.post('/api/upload', upload.array('files'), (req, res) => {
     
     const isReupload = req.body.isReupload === 'true' || req.body.isReupload === true;
     
+    // 按照设计方案：使用 filesInfo 和索引匹配文件
+    let filesInfo = null;
+    let directoryPaths = [];
+    let folderName = '';
+    
+    // 解析 filesInfo 和 directoryPaths（前端传递的完整文件信息）
+    if (!isReupload && req.body.filesInfo) {
+      try {
+        filesInfo = typeof req.body.filesInfo === 'string' 
+          ? JSON.parse(req.body.filesInfo) 
+          : req.body.filesInfo;
+        console.log(`[upload] 解析后的 filesInfo 数量: ${filesInfo.length}`);
+      } catch (e) {
+        console.warn(`[upload] 解析 filesInfo 失败:`, e.message);
+      }
+    }
+    
+    if (!isReupload && req.body.directoryPaths) {
+      try {
+        directoryPaths = typeof req.body.directoryPaths === 'string' 
+          ? JSON.parse(req.body.directoryPaths) 
+          : req.body.directoryPaths;
+        console.log(`[upload] 解析后的 directoryPaths:`, directoryPaths);
+      } catch (e) {
+        console.warn(`[upload] 解析 directoryPaths 失败:`, e.message);
+      }
+    }
+    
+    if (!isReupload && req.body.folderName) {
+      folderName = req.body.folderName;
+      console.log(`[upload] 文件夹名称: ${folderName}`);
+    }
+    
     // 如果不是重新上传，先创建所有需要的目录结构
+    // 注意：前端已经将文件夹名称拼接到 targetPath 了，所以 targetPath 就是最终的文件夹路径
     if (!isReupload && targetPath && targetPath.trim() !== '') {
       const resolvedTargetPath = path.resolve(targetPath);
       const resolvedCurrentDir = path.resolve(__dirname);
       
       // 安全检查：确保路径在允许的范围内
       if (resolvedTargetPath.startsWith(resolvedCurrentDir)) {
-        // 解析 directoryPaths（前端传递的需要创建的目录列表）
-        let directoryPaths = [];
-        if (req.body.directoryPaths) {
-          try {
-            directoryPaths = typeof req.body.directoryPaths === 'string' 
-              ? JSON.parse(req.body.directoryPaths) 
-              : req.body.directoryPaths;
-            console.log(`[upload] 解析后的 directoryPaths:`, directoryPaths);
-          } catch (e) {
-            console.warn(`[upload] 解析 directoryPaths 失败:`, e.message);
-          }
-        }
+        // targetPath 已经包含了文件夹名称，直接使用作为 folderPath
+        const folderPath = resolvedTargetPath;
         
-        // 确保目标目录存在
-        if (!fs.existsSync(resolvedTargetPath)) {
+        // 确保文件夹目录存在
+        if (!fs.existsSync(folderPath)) {
           try {
-            fs.mkdirSync(resolvedTargetPath, { recursive: true });
-            console.log(`[upload] ✓ 创建目标目录: ${resolvedTargetPath}`);
+            fs.mkdirSync(folderPath, { recursive: true });
+            console.log(`[upload] ✓ 创建文件夹: ${folderPath}`);
           } catch (err) {
-            console.error(`[upload] ✗ 创建目标目录失败: ${err.message}`);
-            return res.status(500).json({ success: false, error: `创建目标目录失败: ${err.message}` });
+            console.error(`[upload] ✗ 创建文件夹失败: ${err.message}`);
+            return res.status(500).json({ success: false, error: `创建文件夹失败: ${err.message}` });
           }
         }
         
@@ -1314,7 +1202,7 @@ app.post('/api/upload', upload.array('files'), (req, res) => {
         });
         
         for (const dirPath of sortedDirs) {
-          const fullDirPath = path.join(resolvedTargetPath, dirPath);
+          const fullDirPath = path.join(folderPath, dirPath);
           if (!fs.existsSync(fullDirPath)) {
             try {
               fs.mkdirSync(fullDirPath, { recursive: true });
@@ -1323,69 +1211,97 @@ app.post('/api/upload', upload.array('files'), (req, res) => {
               console.error(`[upload] ✗ 创建子目录失败 ${fullDirPath}: ${err.message}`);
               return res.status(500).json({ success: false, error: `创建子目录失败: ${err.message}` });
             }
-          } else {
-            console.log(`[upload] 子目录已存在: ${fullDirPath}`);
           }
         }
       }
     }
     
-    // 解析 filePaths（如果存在）
-    let filePaths = null;
-    if (req.body.filePaths) {
-      try {
-        filePaths = typeof req.body.filePaths === 'string' ? JSON.parse(req.body.filePaths) : req.body.filePaths;
-        console.log(`[upload] 解析后的 filePaths:`, filePaths);
-      } catch (e) {
-        console.warn(`[upload] 解析 filePaths 失败:`, e.message);
-      }
-    }
-    
     // 打印所有文件信息用于调试
     req.files.forEach((file, index) => {
-      console.log(`[upload] 文件 ${index + 1}: originalname="${file.originalname}", path="${file.path}", filename="${file.filename}"`);
+      console.log(`[upload] 文件 ${index + 1}: fieldname="${file.fieldname}", path="${file.path}", filename="${file.filename}"`);
     });
     
-    // 获取上传的文件夹名称（从实际创建的文件路径中提取）
-    // 注意：由于可能进行了重命名，需要从实际文件路径中提取最终使用的文件夹名称
-    let folderName = '';
-    const firstFile = req.files[0];
-    
-    // 从实际文件路径中提取文件夹名称（这是最终使用的名称，可能已经重命名）
-    const targetDir = (targetPath && targetPath.trim() !== '') ? path.resolve(targetPath) : __dirname;
-    const fileDir = path.dirname(firstFile.path);
-    const relativeDir = path.relative(targetDir, fileDir);
-    
-    console.log(`[upload] 文件目录: ${fileDir}`);
-    console.log(`[upload] 目标目录: ${targetDir}`);
-    console.log(`[upload] 相对目录: ${relativeDir}`);
-    
-    if (relativeDir && !relativeDir.startsWith('..') && relativeDir !== '.') {
-      const parts = relativeDir.split(path.sep).filter(p => p);
-      folderName = parts[0] || 'uploaded';
-      console.log(`[upload] 从实际文件路径提取文件夹名称: ${folderName}`);
-    } else {
-      // 如果无法从路径推断，尝试从 originalname 或 filePaths 中提取原始名称
-      if (firstFile.originalname && (firstFile.originalname.includes('/') || firstFile.originalname.includes('\\'))) {
-        const normalizedPath = firstFile.originalname.replace(/\\/g, '/');
-        folderName = normalizedPath.split('/')[0];
-        console.log(`[upload] 从 originalname 提取文件夹名称: ${folderName}`);
-      } else {
-        // 如果无法推断，使用默认名称
-        folderName = 'uploaded';
-        console.log(`[upload] 使用默认文件夹名称: ${folderName}`);
+    // 如果不是重新上传，且 filesInfo 可用，根据索引匹配文件并移动到正确位置
+    // 注意：前端已经将文件夹名称拼接到 targetPath 了，所以 targetPath 就是最终的文件夹路径
+    if (!isReupload && filesInfo && Array.isArray(filesInfo) && filesInfo.length > 0 && targetPath && targetPath.trim() !== '') {
+      const resolvedTargetPath = path.resolve(targetPath);
+      const resolvedCurrentDir = path.resolve(__dirname);
+      
+      // 安全检查：确保路径在允许的范围内
+      if (resolvedTargetPath.startsWith(resolvedCurrentDir)) {
+        console.log(`[upload] 开始根据索引匹配文件并移动到正确位置...`);
+        
+        // targetPath 已经包含了文件夹名称，直接使用作为 folderPath
+        const folderPath = resolvedTargetPath;
+        
+        // 根据索引匹配文件（filesInfo[index] 对应 req.files[index]）
+        req.files.forEach((file, index) => {
+          const info = filesInfo[index];
+          if (!info) {
+            console.warn(`[upload] ⚠️ 文件 ${index} 没有对应的 filesInfo`);
+            return;
+          }
+          
+          // 构建目标路径
+          const targetDir = path.join(folderPath, info.directoryPath || '');
+          const targetFilePath = path.join(targetDir, info.fileName);
+          
+          console.log(`[upload] 文件 ${index + 1}: 源路径="${file.path}", 目标路径="${targetFilePath}"`);
+          
+          // 确保目标目录存在
+          if (!fs.existsSync(targetDir)) {
+            try {
+              fs.mkdirSync(targetDir, { recursive: true });
+              console.log(`[upload] ✓ 创建目标目录: ${targetDir}`);
+            } catch (err) {
+              console.error(`[upload] ✗ 创建目标目录失败 ${targetDir}: ${err.message}`);
+              return;
+            }
+          }
+          
+          // 使用绝对路径比较
+          const sourcePath = path.resolve(file.path);
+          const destPath = path.resolve(targetFilePath);
+          
+          // 如果文件不在正确的位置，移动它
+          if (sourcePath !== destPath) {
+            try {
+              // 检查目标文件是否已存在（处理重名问题）
+              if (fs.existsSync(destPath)) {
+                // 如果目标文件已存在，生成新文件名（添加时间戳）
+                const ext = path.extname(info.fileName);
+                const nameWithoutExt = path.basename(info.fileName, ext);
+                const timestamp = Date.now();
+                const newFileName = `${nameWithoutExt}_${timestamp}${ext}`;
+                const newDestPath = path.join(targetDir, newFileName);
+                console.warn(`[upload] ⚠️ 目标文件已存在，重命名为: ${newFileName}`);
+                
+                // 移动文件到新位置
+                if (fs.existsSync(sourcePath)) {
+                  fs.renameSync(sourcePath, newDestPath);
+                  file.path = newDestPath;
+                  console.log(`[upload] ✓ 移动文件（重命名）: ${sourcePath} -> ${newDestPath}`);
+                } else {
+                  console.warn(`[upload] ⚠️ 源文件不存在: ${sourcePath}`);
+                }
+              } else {
+                // 目标文件不存在，直接移动
+                if (fs.existsSync(sourcePath)) {
+                  fs.renameSync(sourcePath, destPath);
+                  file.path = destPath;
+                  console.log(`[upload] ✓ 移动文件: ${sourcePath} -> ${destPath}`);
+                } else {
+                  console.warn(`[upload] ⚠️ 源文件不存在: ${sourcePath}`);
+                }
+              }
+            } catch (err) {
+              console.error(`[upload] ✗ 移动文件失败 ${sourcePath} -> ${destPath}:`, err.message);
+            }
+          } else {
+            console.log(`[upload] 文件 ${index + 1} 已在正确位置: ${destPath}`);
+          }
+        });
       }
-    }
-    
-    // 验证文件夹是否真的被创建了
-    const expectedFolderPath = path.join(targetDir, folderName);
-    const folderExists = fs.existsSync(expectedFolderPath);
-    
-    console.log(`[upload] 预期文件夹路径: ${expectedFolderPath}`);
-    console.log(`[upload] 文件夹是否存在: ${folderExists}`);
-    
-    if (!folderExists) {
-      console.warn(`[upload] ⚠️ 警告：文件夹 ${expectedFolderPath} 不存在！`);
     }
     
     const uploadedFiles = req.files.map(file => ({
@@ -1725,6 +1641,19 @@ function restoreFileSystemFromSnapshot(targetSnapshot, currentSnapshot) {
 // 从备份恢复文件
 function restoreFileFromBackup(backedFile, versionId) {
   try {
+    // 优先使用原始相对路径（如果存在），这样可以保持上传时的目录结构
+    let targetPath;
+    if (backedFile.originalRelativePath) {
+      // 使用原始相对路径恢复文件（相对于项目根目录）
+      targetPath = path.join(__dirname, backedFile.originalRelativePath);
+      console.log(`[restore] 使用原始相对路径恢复: ${backedFile.originalRelativePath} -> ${targetPath}`);
+    } else {
+      // 回退到使用保存后的绝对路径
+      targetPath = backedFile.originalPath;
+      console.log(`[restore] 使用保存后的绝对路径恢复: ${targetPath}`);
+    }
+    
+    // 使用 relativePath 来查找备份文件（因为备份时使用的是 relativePath）
     const backupPath = path.join(BACKUP_DIR, versionId, backedFile.relativePath.replace(/[^a-zA-Z0-9/._-]/g, '_'));
     
     if (!fs.existsSync(backupPath)) {
@@ -1732,7 +1661,6 @@ function restoreFileFromBackup(backedFile, versionId) {
       return false;
     }
     
-    const targetPath = backedFile.originalPath;
     const targetDir = path.dirname(targetPath);
     
     // 确保目标目录存在
@@ -1742,10 +1670,10 @@ function restoreFileFromBackup(backedFile, versionId) {
     
     // 恢复文件内容
     fs.copyFileSync(backupPath, targetPath);
-    console.log(`[restore] 恢复文件: ${targetPath}`);
+    console.log(`[restore] ✓ 恢复文件: ${targetPath}`);
     return true;
   } catch (err) {
-    console.error(`恢复文件失败 ${backedFile.originalPath}:`, err);
+    console.error(`恢复文件失败 ${backedFile.originalPath || backedFile.originalRelativePath}:`, err);
     return false;
   }
 }

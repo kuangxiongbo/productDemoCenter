@@ -1628,25 +1628,42 @@ function setupUploadForm() {
             }
         } else {
             // 文件夹上传模式：保留文件夹结构
-            const filePaths = [];
+            // 方案：使用文件索引作为标识，传递完整的文件信息
+            
+            // 1. 提取文件夹名称
+            const folderName = files.length > 0 && files[0].webkitRelativePath 
+                ? files[0].webkitRelativePath.split('/')[0] 
+                : 'uploaded';
+            
+            // 2. 收集所有文件信息
+            const filesInfo = [];
             const directoryPaths = new Set(); // 用于收集所有需要创建的目录路径
             
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 // webkitRelativePath 格式：folderName/subfolder/file.html
                 const relativePath = file.webkitRelativePath || file.name;
-                console.log(`文件 ${i + 1}: name="${file.name}", webkitRelativePath="${file.webkitRelativePath}", 使用路径="${relativePath}"`);
+                const normalizedPath = relativePath.replace(/\\/g, '/');
+                const parts = normalizedPath.split('/').filter(p => p);
                 
-                // 传递完整的相对路径（包含文件夹名称和子目录）
-                formData.append('files', file, relativePath);
-                filePaths.push(relativePath);
+                // 提取信息
+                const fileFolderName = parts[0];  // 第一层是文件夹名称
+                const fileName = parts[parts.length - 1];  // 最后是文件名
+                const dirParts = parts.slice(1, -1);  // 中间是目录路径
+                const directoryPath = dirParts.join('/');  // 目录路径（相对于文件夹根目录）
+                
+                filesInfo.push({
+                    index: i,
+                    relativePath: relativePath,  // 完整相对路径
+                    fileName: fileName,  // 文件名
+                    directoryPath: directoryPath,  // 目录路径（去掉文件夹名称和文件名）
+                    folderName: fileFolderName  // 文件夹名称
+                });
+                
+                console.log(`[前端] 文件 ${i + 1}: relativePath="${relativePath}", fileName="${fileName}", directoryPath="${directoryPath}"`);
                 
                 // 提取所有需要创建的目录路径（支持多层级，如 sub1/sub2/sub3）
-                if (relativePath.includes('/') || relativePath.includes('\\')) {
-                    const normalizedPath = relativePath.replace(/\\/g, '/');
-                    const parts = normalizedPath.split('/');
-                    // 去掉第一层（文件夹名称，已拼接到targetPath）和最后一部分（文件名）
-                    const dirParts = parts.slice(1, -1);
+                if (dirParts.length > 0) {
                     // 逐层构建目录路径（确保所有层级的目录都被收集）
                     // 例如：folderName/sub1/sub2/sub3/file.html
                     // 需要收集：sub1, sub1/sub2, sub1/sub2/sub3
@@ -1657,12 +1674,18 @@ function setupUploadForm() {
                         console.log(`[前端] 收集目录路径: ${currentDir} (来自: ${relativePath})`);
                     }
                 }
+                
+                // 使用索引作为文件标识，避免文件名冲突
+                // 格式：file_索引，这样后端可以通过索引匹配 filesInfo
+                formData.append('files', file, `file_${i}`);
             }
             
-            // 将路径信息作为 JSON 字符串传递
-            formData.append('filePaths', JSON.stringify(filePaths));
-            // 传递所有需要创建的目录路径（相对于上传文件夹根目录）
+            // 3. 传递文件信息和目录路径
+            formData.append('folderName', folderName);
+            formData.append('filesInfo', JSON.stringify(filesInfo));
             formData.append('directoryPaths', JSON.stringify(Array.from(directoryPaths)));
+            console.log(`[前端] 文件夹名称: ${folderName}`);
+            console.log(`[前端] 文件信息数量: ${filesInfo.length}`);
             console.log(`[前端] 需要创建的目录路径:`, Array.from(directoryPaths));
         }
         

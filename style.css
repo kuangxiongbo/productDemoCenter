@@ -431,6 +431,9 @@ body {
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    min-width: 0; /* 允许卡片收缩 */
+    display: flex;
+    flex-direction: column;
 }
 
 .prototype-card::before {
@@ -536,6 +539,7 @@ body {
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
+    min-width: 0; /* 允许 flex 子元素收缩 */
 }
 
 .prototype-name {
@@ -544,6 +548,10 @@ body {
     color: white;
     flex: 1;
     margin: 0;
+    min-width: 0; /* 允许 flex 子元素收缩 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .prototype-path {
@@ -554,6 +562,10 @@ body {
     display: flex;
     align-items: center;
     gap: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0; /* 允许 flex 子元素收缩 */
 }
 
 .prototype-path::before {
