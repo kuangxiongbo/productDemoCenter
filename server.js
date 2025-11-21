@@ -3,6 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const { execSync } = require('child_process');
 
 const app = express();
 const PORT = 3000;
@@ -1794,6 +1795,175 @@ function restoreDirectory(snapshot) {
     return null;
   }
 }
+
+// Git同步接口
+app.post('/api/git/sync', (req, res) => {
+  try {
+    const { repoUrl, branch = 'main', username = '', password = '', targetPath = '' } = req.body;
+    
+    if (!repoUrl || repoUrl.trim() === '') {
+      return res.status(400).json({ success: false, error: 'Git仓库地址不能为空' });
+    }
+    
+    // 处理认证：如果有用户名和密码，将它们嵌入到URL中
+    let authenticatedUrl = repoUrl.trim();
+    if (username && password) {
+      try {
+        // 解析URL
+        const urlObj = new URL(repoUrl);
+        // 将用户名和密码编码后嵌入URL
+        urlObj.username = encodeURIComponent(username);
+        urlObj.password = encodeURIComponent(password);
+        authenticatedUrl = urlObj.toString();
+        console.log(`[Git同步] 使用认证信息（用户名: ${username}）`);
+      } catch (urlError) {
+        // 如果URL解析失败，尝试手动处理
+        // 对于 http://host/path 格式，转换为 http://user:pass@host/path
+        if (repoUrl.startsWith('http://') || repoUrl.startsWith('https://')) {
+          const urlMatch = repoUrl.match(/^(https?:\/\/)([^\/]+)(.*)$/);
+          if (urlMatch) {
+            const protocol = urlMatch[1];
+            const host = urlMatch[2];
+            const path = urlMatch[3];
+            authenticatedUrl = `${protocol}${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}${path}`;
+            console.log(`[Git同步] 使用认证信息（手动处理，用户名: ${username}）`);
+          }
+        } else {
+          console.warn(`[Git同步] 无法处理认证信息，使用原始URL`);
+        }
+      }
+    }
+    
+    // 验证仓库URL格式（允许包含认证信息）
+    const gitUrlPattern = /^(https?:\/\/|git@)([^@]+@)?([a-zA-Z0-9\-\.]+)(\/|:)([a-zA-Z0-9\-_\/\.]+)(\.git)?$/;
+    if (!gitUrlPattern.test(authenticatedUrl)) {
+      return res.status(400).json({ success: false, error: 'Git仓库地址格式不正确' });
+    }
+    
+    // 确定目标目录
+    let targetDir = __dirname;
+    if (targetPath && targetPath.trim() !== '') {
+      const resolvedPath = path.resolve(targetPath);
+      const resolvedCurrentDir = path.resolve(__dirname);
+      
+      // 安全检查：确保路径在允许的范围内
+      if (resolvedPath.startsWith(resolvedCurrentDir)) {
+        targetDir = resolvedPath;
+      } else {
+        return res.status(403).json({ success: false, error: '访问被拒绝：目标路径不在允许范围内' });
+      }
+    }
+    
+    // 从仓库URL提取仓库名称（用于创建目录，使用原始URL而不是认证后的URL）
+    const repoName = repoUrl.split('/').pop().replace(/\.git$/, '') || 'git-repo';
+    const cloneDir = path.join(targetDir, repoName);
+    
+    console.log(`[Git同步] 开始同步仓库: ${repoUrl}`);
+    console.log(`[Git同步] 分支: ${branch}`);
+    console.log(`[Git同步] 目标目录: ${cloneDir}`);
+    
+    try {
+      // 检查目录是否已存在
+      if (fs.existsSync(cloneDir)) {
+        // 如果目录已存在，尝试拉取更新
+        console.log(`[Git同步] 目录已存在，尝试拉取更新...`);
+        try {
+          // 检查是否是git仓库
+          const gitDir = path.join(cloneDir, '.git');
+          if (fs.existsSync(gitDir)) {
+            // 如果提供了认证信息，需要更新远程URL
+            if (username && password) {
+              try {
+                // 获取当前远程URL
+                const currentRemote = execSync(`cd "${cloneDir}" && git config --get remote.origin.url`, {
+                  stdio: 'pipe',
+                  encoding: 'utf8'
+                }).trim();
+                
+                // 如果URL不包含认证信息，更新它
+                if (!currentRemote.includes('@') || !currentRemote.includes(username)) {
+                  execSync(`cd "${cloneDir}" && git remote set-url origin "${authenticatedUrl}"`, {
+                    stdio: 'pipe',
+                    encoding: 'utf8'
+                  });
+                  console.log(`[Git同步] 已更新远程URL以包含认证信息`);
+                }
+              } catch (urlUpdateError) {
+                console.warn(`[Git同步] 更新远程URL失败:`, urlUpdateError.message);
+              }
+            }
+            
+            // 切换到目标分支并拉取
+            execSync(`cd "${cloneDir}" && git fetch origin && git checkout ${branch} && git pull origin ${branch}`, {
+              stdio: 'pipe',
+              encoding: 'utf8',
+              timeout: 60000 // 60秒超时
+            });
+            console.log(`[Git同步] ✓ 拉取更新成功`);
+            return res.json({ 
+              success: true, 
+              message: `仓库已更新到最新版本（分支: ${branch}）`,
+              path: cloneDir
+            });
+          } else {
+            // 目录存在但不是git仓库，返回错误
+            return res.status(400).json({ 
+              success: false, 
+              error: `目录 ${repoName} 已存在但不是Git仓库，请先删除或重命名该目录` 
+            });
+          }
+        } catch (pullError) {
+          console.error(`[Git同步] ✗ 拉取更新失败:`, pullError.message);
+          return res.status(500).json({ 
+            success: false, 
+            error: `拉取更新失败: ${pullError.message}` 
+          });
+        }
+      } else {
+        // 目录不存在，克隆仓库
+        console.log(`[Git同步] 开始克隆仓库...`);
+        try {
+          // 确保父目录存在
+          if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
+          }
+          
+          // 克隆仓库（使用包含认证信息的URL）
+          execSync(`git clone -b ${branch} "${authenticatedUrl}" "${cloneDir}"`, {
+            stdio: 'pipe',
+            encoding: 'utf8',
+            timeout: 120000 // 120秒超时
+          });
+          
+          console.log(`[Git同步] ✓ 克隆成功`);
+          return res.json({ 
+            success: true, 
+            message: `仓库已成功克隆（分支: ${branch}）`,
+            path: cloneDir
+          });
+        } catch (cloneError) {
+          console.error(`[Git同步] ✗ 克隆失败:`, cloneError.message);
+          return res.status(500).json({ 
+            success: false, 
+            error: `克隆仓库失败: ${cloneError.message}` 
+          });
+        }
+      }
+    } catch (error) {
+      console.error(`[Git同步] ✗ 操作失败:`, error.message);
+      return res.status(500).json({ 
+        success: false, 
+        error: `Git操作失败: ${error.message}` 
+      });
+    }
+  } catch (error) {
+    console.error(`[Git同步] ✗ 处理请求失败:`, error);
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message || '未知错误' 
+    });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);

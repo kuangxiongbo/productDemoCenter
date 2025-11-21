@@ -436,14 +436,6 @@ async function showFolderDetail(folder) {
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </button>
-                            <button class="prototype-delete-icon-btn" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}')" title="删除原型">
-                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
                         </div>
                         ${(() => {
                             const path = proto.relativePath || getPrototypePath(proto.path);
@@ -471,6 +463,15 @@ async function showFolderDetail(folder) {
                                         <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
                                     重新上传
+                                </button>
+                                <button class="prototype-more-item prototype-more-delete" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="删除原型">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    删除原型
                                 </button>
                             </div>
                         </div>
@@ -751,14 +752,6 @@ function showAllPrototypes(prototypes) {
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </button>
-                        <button class="prototype-delete-icon-btn" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}')" title="删除原型">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
                     </div>
                     ${(() => {
                         const path = proto.relativePath || getPrototypePath(proto.path);
@@ -767,17 +760,37 @@ function showAllPrototypes(prototypes) {
                     <p class="prototype-time">${formatDate(proto.modified)}</p>
                 </div>
                 <div class="prototype-card-footer">
-                    <button class="prototype-btn prototype-reupload-btn" onclick="showReuploadDialog('${proto.path}')" title="重新上传文件">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        重新上传
-                    </button>
                     <button class="prototype-btn" onclick="window.open('${proto.indexFile}', '_blank')">
                         打开演示
                     </button>
+                    <div class="prototype-more-actions">
+                        <button class="prototype-btn prototype-more-btn" onclick="toggleMoreActions(this)" title="更多操作">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+                                <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                                <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <div class="prototype-more-menu" style="display: none;">
+                            <button class="prototype-more-item" onclick="showReuploadDialog('${proto.path}'); closeMoreActions(this);" title="重新上传文件">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                重新上传
+                            </button>
+                            <button class="prototype-more-item prototype-more-delete" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="删除原型">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                删除原型
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -1011,14 +1024,6 @@ function setupSearch() {
                                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                             </svg>
                                         </button>
-                                        <button class="prototype-delete-icon-btn" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}')" title="删除原型">
-                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                            </svg>
-                                        </button>
                                     </div>
                                     ${(() => {
                             const path = proto.relativePath || getPrototypePath(proto.path);
@@ -1027,17 +1032,37 @@ function setupSearch() {
                                     <p class="prototype-time">${formatDate(proto.modified)}</p>
                                 </div>
                                 <div class="prototype-card-footer">
-                                    <button class="prototype-btn prototype-reupload-btn" onclick="showReuploadDialog('${proto.path}')" title="重新上传文件">
-                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                            <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                            <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                        重新上传
-                                    </button>
                                     <button class="prototype-btn" onclick="window.open('${proto.indexFile}', '_blank')">
                                         打开演示
                                     </button>
+                                    <div class="prototype-more-actions">
+                                        <button class="prototype-btn prototype-more-btn" onclick="toggleMoreActions(this)" title="更多操作">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+                                                <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                                                <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+                                            </svg>
+                                        </button>
+                                        <div class="prototype-more-menu" style="display: none;">
+                                            <button class="prototype-more-item" onclick="showReuploadDialog('${proto.path}'); closeMoreActions(this);" title="重新上传文件">
+                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                重新上传
+                                            </button>
+                                            <button class="prototype-more-item prototype-more-delete" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="删除原型">
+                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                删除原型
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -1742,12 +1767,148 @@ function setupUploadForm() {
     });
 }
 
+// 显示Git同步对话框
+async function showGitSyncDialog() {
+    const modal = document.getElementById('gitSyncModal');
+    const targetPathSelect = document.getElementById('gitTargetPath');
+    const statusDiv = document.getElementById('gitSyncStatus');
+    
+    // 隐藏状态信息
+    statusDiv.style.display = 'none';
+    
+    // 获取所有可用目录
+    const directories = await getAllDirectoriesForUpload();
+    
+    // 清空并填充目录选择器
+    targetPathSelect.innerHTML = '';
+    directories.forEach(dir => {
+        const option = document.createElement('option');
+        option.value = dir.path;
+        option.textContent = '  '.repeat(dir.level) + dir.displayName;
+        targetPathSelect.appendChild(option);
+    });
+    
+    // 设置默认选中的目录
+    if (currentPath) {
+        targetPathSelect.value = currentPath;
+    } else {
+        targetPathSelect.value = '';
+    }
+    
+    // 清空表单
+    document.getElementById('gitRepoUrl').value = '';
+    document.getElementById('gitBranch').value = '';
+    document.getElementById('gitUsername').value = '';
+    document.getElementById('gitPassword').value = '';
+    
+    modal.style.display = 'flex';
+}
+
+// 关闭Git同步对话框
+function closeGitSyncDialog() {
+    const modal = document.getElementById('gitSyncModal');
+    modal.style.display = 'none';
+}
+
+// 初始化Git同步表单
+function setupGitSyncForm() {
+    const gitSyncForm = document.getElementById('gitSyncForm');
+    const statusDiv = document.getElementById('gitSyncStatus');
+    
+    gitSyncForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = gitSyncForm.querySelector('.git-sync-submit-btn');
+        const originalText = submitBtn.textContent;
+        const repoUrl = document.getElementById('gitRepoUrl').value.trim();
+        const branch = document.getElementById('gitBranch').value.trim();
+        const username = document.getElementById('gitUsername').value.trim();
+        const password = document.getElementById('gitPassword').value;
+        const targetPath = document.getElementById('gitTargetPath').value;
+        
+        if (!repoUrl) {
+            statusDiv.textContent = '请输入Git仓库地址';
+            statusDiv.className = 'git-sync-status error';
+            statusDiv.style.display = 'block';
+            return;
+        }
+        
+        // 显示加载状态
+        submitBtn.disabled = true;
+        submitBtn.textContent = '同步中...';
+        statusDiv.textContent = '正在同步Git仓库，请稍候...';
+        statusDiv.className = 'git-sync-status info';
+        statusDiv.style.display = 'block';
+        
+        try {
+            const response = await fetch('/api/git/sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    repoUrl: repoUrl,
+                    branch: branch || 'main',
+                    username: username,
+                    password: password,
+                    targetPath: targetPath || ''
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                statusDiv.textContent = `同步成功！${data.message || ''}`;
+                statusDiv.className = 'git-sync-status success';
+                
+                // 延迟关闭对话框并刷新
+                setTimeout(() => {
+                    closeGitSyncDialog();
+                    // 重新加载树和内容
+                    if (currentPath === null) {
+                        showRootContent();
+                    } else {
+                        const activeNode = document.querySelector('.tree-node-item.active');
+                        if (activeNode && activeNode.dataset.path !== 'home') {
+                            const folder = {
+                                name: activeNode.querySelector('.tree-node-name').textContent,
+                                displayName: activeNode.querySelector('.tree-node-name').textContent,
+                                path: activeNode.dataset.path,
+                                hasIndex: false,
+                                indexFile: null
+                            };
+                            showFolderDetail(folder);
+                        }
+                    }
+                    loadTree();
+                }, 2000);
+            } else {
+                statusDiv.textContent = `同步失败：${data.error || '未知错误'}`;
+                statusDiv.className = 'git-sync-status error';
+            }
+        } catch (err) {
+            console.error('Git同步失败:', err);
+            statusDiv.textContent = '同步失败，请检查网络连接和仓库地址';
+            statusDiv.className = 'git-sync-status error';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    });
+}
+
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     loadTree();
     setupSearch();
     setupUploadForm();
     setupFolderForm();
+    setupGitSyncForm();
+    
+    // 同步Git仓库按钮
+    document.getElementById('syncGitBtn').addEventListener('click', () => {
+        showGitSyncDialog();
+    });
     
     // 上传文件夹按钮
     document.getElementById('uploadFolderBtn').addEventListener('click', () => {

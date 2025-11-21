@@ -29,6 +29,12 @@
                             </svg>
                         </span>
                     </div>
+                    <button class="sync-git-btn" id="syncGitBtn" title="同步Git仓库原型">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>同步Git仓库原型</span>
+                    </button>
                     <button class="upload-folder-btn" id="uploadFolderBtn" title="上传原型文件夹">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -160,6 +166,47 @@
                             <button type="submit" class="upload-submit-btn">上传</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Git同步对话框 -->
+        <div class="git-sync-modal" id="gitSyncModal" style="display: none;">
+            <div class="git-sync-modal-content">
+                <div class="git-sync-modal-header">
+                    <h3>同步Git仓库原型</h3>
+                    <button class="git-sync-modal-close" onclick="closeGitSyncDialog()">×</button>
+                </div>
+                <div class="git-sync-modal-body">
+                    <form id="gitSyncForm">
+                        <div class="git-sync-input-wrapper">
+                            <label for="gitRepoUrl">Git仓库地址：</label>
+                            <input type="text" id="gitRepoUrl" name="repoUrl" class="git-repo-input" placeholder="https://github.com/username/repo.git" required />
+                        </div>
+                        <div class="git-sync-input-wrapper">
+                            <label for="gitBranch">分支名称（可选）：</label>
+                            <input type="text" id="gitBranch" name="branch" class="git-branch-input" placeholder="main" />
+                        </div>
+                        <div class="git-sync-input-wrapper">
+                            <label for="gitUsername">用户名（可选，私有仓库需要）：</label>
+                            <input type="text" id="gitUsername" name="username" class="git-username-input" placeholder="Git用户名" />
+                        </div>
+                        <div class="git-sync-input-wrapper">
+                            <label for="gitPassword">密码/Token（可选，私有仓库需要）：</label>
+                            <input type="password" id="gitPassword" name="password" class="git-password-input" placeholder="Git密码或访问令牌" />
+                        </div>
+                        <div class="git-sync-input-wrapper">
+                            <label for="gitTargetPath">同步到目录：</label>
+                            <select id="gitTargetPath" name="targetPath" class="git-target-select">
+                                <option value="">根目录</option>
+                            </select>
+                        </div>
+                        <div class="git-sync-actions">
+                            <button type="button" class="git-sync-cancel-btn" onclick="closeGitSyncDialog()">取消</button>
+                            <button type="submit" class="git-sync-submit-btn">同步</button>
+                        </div>
+                    </form>
+                    <div class="git-sync-status" id="gitSyncStatus" style="display: none;"></div>
                 </div>
             </div>
         </div>

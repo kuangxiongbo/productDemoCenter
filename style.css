@@ -410,6 +410,32 @@ body {
     height: 18px;
 }
 
+.sync-git-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.sync-git-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.sync-git-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
 /* 原型卡片样式 */
 .prototypes-section {
     margin-bottom: 32px;
@@ -419,6 +445,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
+    align-items: stretch; /* 确保所有卡片高度一致 */
 }
 
 .prototype-card {
@@ -434,6 +461,8 @@ body {
     min-width: 0; /* 允许卡片收缩 */
     display: flex;
     flex-direction: column;
+    min-height: 280px; /* 统一卡片最小高度 */
+    height: 100%; /* 确保卡片填满网格单元格 */
 }
 
 .prototype-card::before {
@@ -532,6 +561,10 @@ body {
 
 .prototype-card-body {
     margin-bottom: 20px;
+    flex: 1; /* 允许body区域自动扩展 */
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* 允许收缩 */
 }
 
 .prototype-name-wrapper {
@@ -585,12 +618,13 @@ body {
     display: flex;
     gap: 8px;
     flex-direction: row;
-    align-items: center;
+    align-items: stretch; /* 确保按钮高度一致 */
+    justify-content: space-between;
 }
 
 .prototype-btn {
     flex: 1;
-    padding: 12px 24px;
+    padding: 0; /* 移除padding，使用height控制 */
     background: rgba(255, 255, 255, 0.2);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -604,12 +638,21 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    min-width: 0;
+    height: 44px; /* 统一按钮高度 */
+    line-height: 44px; /* 确保文字垂直居中 */
 }
 
 .prototype-btn:hover {
     background: rgba(255, 255, 255, 0.3);
     border-color: rgba(255, 255, 255, 0.5);
-    transform: scale(1.02);
+    transform: translateY(-1px);
+}
+
+.prototype-more-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
 }
 
 .prototype-btn svg {
@@ -621,12 +664,26 @@ body {
 .prototype-more-actions {
     position: relative;
     flex: 0 0 auto;
+    margin-left: auto;
 }
 
 .prototype-more-btn {
     flex: 0 0 auto;
     min-width: 48px;
-    padding: 12px;
+    width: 48px;
+    padding: 0; /* 移除padding，使用height控制 */
+    flex-shrink: 0;
+    height: 44px; /* 与打开演示按钮高度一致 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
 }
 
 .prototype-more-menu {
@@ -1362,4 +1419,179 @@ body {
 .upload-submit-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* Git同步对话框样式 */
+.git-sync-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.git-sync-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.git-sync-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.git-sync-modal-header h3 {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.git-sync-modal-close {
+    background: none;
+    border: none;
+    font-size: 2em;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.git-sync-modal-close:hover {
+    color: #333;
+}
+
+.git-sync-modal-body {
+    padding: 24px;
+}
+
+.git-sync-input-wrapper {
+    margin-bottom: 20px;
+}
+
+.git-sync-input-wrapper label {
+    display: block;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.git-repo-input,
+.git-branch-input,
+.git-username-input,
+.git-password-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.git-repo-input:focus,
+.git-branch-input:focus,
+.git-username-input:focus,
+.git-password-input:focus {
+    border-color: #667eea;
+}
+
+.git-target-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    outline: none;
+    transition: border-color 0.2s;
+    background: white;
+}
+
+.git-target-select:focus {
+    border-color: #667eea;
+}
+
+.git-sync-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.git-sync-cancel-btn,
+.git-sync-submit-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.git-sync-cancel-btn {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.git-sync-cancel-btn:hover {
+    background: #e5e5e5;
+}
+
+.git-sync-submit-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.git-sync-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.git-sync-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.git-sync-status {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+.git-sync-status.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.git-sync-status.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.git-sync-status.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
 }
