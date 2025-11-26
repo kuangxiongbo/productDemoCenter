@@ -43,6 +43,13 @@
                         </svg>
                         <span>上传原型文件夹</span>
                     </button>
+                    <button class="link-prototype-btn" id="linkPrototypeBtn" title="链接到原型">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>链接到原型</span>
+                    </button>
                     <button class="version-history-btn" id="versionHistoryBtn" title="版本历史">
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M10 2C5.58 2 2 5.58 2 10C2 14.42 5.58 18 10 18C14.42 18 18 14.42 18 10C18 5.58 14.42 2 10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
@@ -59,7 +66,7 @@
                 </div>
             </div>
         </header>
-
+        
         <!-- 主内容区：双栏布局 -->
         <div class="main-content">
             <!-- 左侧树形导航 -->
@@ -67,13 +74,13 @@
                 <div class="sidebar-header">
                     <h2>目录导航</h2>
                 </div>
-                <div class="loading" id="loading">
-                    <div class="spinner"></div>
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
                     <p>正在加载...</p>
                 </div>
                 <div class="tree-container" id="treeContainer">
                     <!-- 树形导航将在这里生成 -->
-                </div>
+        </div>
             </aside>
 
             <!-- 右侧详情区 -->
@@ -88,7 +95,7 @@
                 </div>
             </main>
         </div>
-
+        
         <!-- 错误提示 -->
         <div class="error" id="error" style="display: none;">
             <p>❌ 加载失败，请检查服务器是否正常运行</p>
@@ -207,6 +214,39 @@
                         </div>
                     </form>
                     <div class="git-sync-status" id="gitSyncStatus" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 链接到原型对话框 -->
+        <div class="link-prototype-modal" id="linkPrototypeModal" style="display: none;">
+            <div class="link-prototype-modal-content">
+                <div class="link-prototype-modal-header">
+                    <h3>链接到原型</h3>
+                    <button class="link-prototype-modal-close" onclick="closeLinkPrototypeDialog()">×</button>
+                </div>
+                <div class="link-prototype-modal-body">
+                    <form id="linkPrototypeForm">
+                        <div class="link-prototype-input-wrapper">
+                            <label for="linkPrototypeName">原型名称：</label>
+                            <input type="text" id="linkPrototypeName" name="name" class="link-prototype-name-input" placeholder="请输入原型名称" required />
+                        </div>
+                        <div class="link-prototype-input-wrapper">
+                            <label for="linkPrototypeUrl">链接地址：</label>
+                            <input type="url" id="linkPrototypeUrl" name="url" class="link-prototype-url-input" placeholder="https://example.com" required />
+                        </div>
+                        <div class="link-prototype-input-wrapper">
+                            <label for="linkPrototypeTargetPath">保存位置：</label>
+                            <select id="linkPrototypeTargetPath" name="targetPath" class="link-prototype-target-select">
+                                <option value="">根目录</option>
+                            </select>
+                        </div>
+                        <div class="link-prototype-actions">
+                            <button type="button" class="link-prototype-cancel-btn" onclick="closeLinkPrototypeDialog()">取消</button>
+                            <button type="submit" class="link-prototype-submit-btn">保存</button>
+                        </div>
+                    </form>
+                    <div class="link-prototype-status" id="linkPrototypeStatus" style="display: none;"></div>
                 </div>
             </div>
         </div>

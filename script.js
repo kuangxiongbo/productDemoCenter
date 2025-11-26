@@ -63,8 +63,9 @@ function escapeHtml(text) {
 }
 
 // API调用函数
-async function fetchFolders() {
-    const response = await fetch('/api/folders');
+async function fetchFolders(forceReload = false) {
+    const url = forceReload ? '/api/folders?reload=true' : '/api/folders';
+    const response = await fetch(url);
     const data = await response.json();
     return data.success ? data.folders : [];
 }
@@ -326,6 +327,22 @@ function selectTreeNode(path) {
     currentPath = path;
 }
 
+// 规范化原型入口URL：如果路径中出现多次 /dist/，只保留第一段 /xxx/dist/
+function normalizeIndexUrl(url) {
+    try {
+        if (!url) return url;
+        const decoded = decodeURIComponent(url);
+        const idx = decoded.indexOf('/dist/');
+        if (idx === -1) return url;
+        // 统一只保留首次出现 /dist/ 之前的部分 + "/dist/"
+        const base = decoded.substring(0, idx + 6); // "/dist/" 长度为 6
+        return base;
+    } catch (e) {
+        console.warn('normalizeIndexUrl 失败:', e);
+        return url;
+    }
+}
+
 // 递归查找指定目录下所有层级的原型
 async function findPrototypesInDirectory(dirPath) {
     const prototypes = [];
@@ -345,11 +362,13 @@ async function findPrototypesInDirectory(dirPath) {
                 relativePath: relativePath, // 添加相对路径
                 modified: subDir.modified,
                 hasIndex: true,
-                indexFile: subDir.indexFile
+                indexFile: normalizeIndexUrl(subDir.indexFile)
             });
+            // 原型目录下不再递归查找子目录
+            continue;
         }
         
-        // 递归查找子目录中的原型
+        // 只对非原型目录递归查找子目录中的原型
         const subPrototypes = await findPrototypesInDirectory(subDir.path);
         prototypes.push(...subPrototypes);
     }
@@ -464,6 +483,26 @@ async function showFolderDetail(folder) {
                                     </svg>
                                     重新上传
                                 </button>
+                                <button class="prototype-more-item" onclick="showResyncGitDialog('${proto.path}'); closeMoreActions(this);" title="重新同步Git仓库">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    重新同步Git
+                                </button>
+                                <button class="prototype-more-item" onclick="rebuildPrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="重新编译项目">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    重新编译
+                                </button>
+                                <button class="prototype-more-item" onclick="downloadPrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="下载原型文件">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    下载原型文件
+                                </button>
                                 <button class="prototype-more-item prototype-more-delete" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="删除原型">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -575,16 +614,37 @@ async function findAllPrototypes(folders = null) {
                 relativePath: relativePath, // 添加相对路径
                 modified: folder.modified,
                 hasIndex: true,
-                indexFile: folder.indexFile
+                indexFile: normalizeIndexUrl(folder.indexFile)
             });
+            // 原型目录下不再递归查找子目录（但首页需要排除这个规则）
+            // 注意：这里 continue 是为了跳过递归查找，但原型本身已经被添加到列表了
+            continue;
         }
         
-        // 递归查找子目录中的原型
+        // 只对非原型目录递归查找子目录中的原型
         const subDirs = await getSubDirectories(folder.path);
         if (subDirs.length > 0) {
-            // 递归查找子目录
-            const subPrototypes = await findAllPrototypes(subDirs);
-            prototypes.push(...subPrototypes);
+            // 先收集所有原型子目录
+            const prototypeSubDirs = subDirs.filter(d => d.hasIndex && d.indexFile);
+            for (const protoDir of prototypeSubDirs) {
+                const relativePath = protoDir.path.replace(/^.*[\\/]首页自动化展示[\\/]/, '').replace(/\\/g, '/');
+                prototypes.push({
+                    name: protoDir.name,
+                    displayName: protoDir.displayName || protoDir.name,
+                    path: protoDir.path,
+                    relativePath: relativePath,
+                    modified: protoDir.modified,
+                    hasIndex: true,
+                    indexFile: protoDir.indexFile
+                });
+            }
+            
+            // 然后只对非原型子目录递归查找
+            const normalSubDirs = subDirs.filter(d => !d.hasIndex);
+            if (normalSubDirs.length > 0) {
+                const subPrototypes = await findAllPrototypes(normalSubDirs);
+                prototypes.push(...subPrototypes);
+            }
         }
     }
     
@@ -593,9 +653,14 @@ async function findAllPrototypes(folders = null) {
 
 // 显示根目录内容（点击首页时）
 async function showRootContent() {
-    // 重新加载并递归查找所有原型
+    // 重新加载并递归查找所有原型（现在链接原型也会被自动识别）
     allFolders = await fetchFolders();
     const allPrototypes = await findAllPrototypes(allFolders);
+    
+    // 标记链接原型（通过检查是否有 linkDir 属性）
+    // 注意：现在链接原型已经通过目录和 index.html 被自动识别，所以不需要单独获取
+    // 但我们可以通过检查原型路径是否在链接原型列表中来确定是否是链接原型
+    
     allPrototypesCache = allPrototypes; // 更新全局缓存
     showAllPrototypes(allPrototypes);
     selectTreeNode(null);
@@ -667,18 +732,63 @@ function createHomeNode() {
     return node;
 }
 
+// 保存和恢复展开状态
+let expandedPaths = new Set(); // 保存展开的路径
+
+// 保存当前展开状态
+function saveExpandedState() {
+    expandedPaths.clear();
+    document.querySelectorAll('.tree-children.expanded').forEach(children => {
+        const node = children.closest('.tree-node');
+        if (node && node.dataset.path) {
+            expandedPaths.add(node.dataset.path);
+        }
+    });
+}
+
+// 恢复展开状态（递归恢复所有层级的展开状态）
+async function restoreExpandedState() {
+    // 按路径长度排序，先展开父节点，再展开子节点
+    const sortedPaths = Array.from(expandedPaths).sort((a, b) => a.length - b.length);
+    
+    for (const path of sortedPaths) {
+        const node = document.querySelector(`.tree-node[data-path="${path}"]`);
+        if (node) {
+            const children = node.querySelector('.tree-children');
+            const expandIcon = node.querySelector('.tree-expand-icon');
+            if (children && expandIcon) {
+                // 如果子节点已加载，直接展开
+                if (children.children.length > 0) {
+                    children.classList.add('expanded');
+                    expandIcon.classList.add('expanded');
+                } else {
+                    // 如果子节点未加载，需要异步加载
+                    const folderPath = node.dataset.path;
+                    if (folderPath) {
+                        await expandTreeNode(node, folderPath);
+                    }
+                }
+            }
+        }
+    }
+}
+
 // 加载树形导航和原型列表
-async function loadTree() {
+async function loadTree(forceReload = false) {
     const loading = document.getElementById('loading');
     const treeContainer = document.getElementById('treeContainer');
     const error = document.getElementById('error');
     
     try {
+        // 保存当前展开状态
+        saveExpandedState();
+        
         loading.style.display = 'block';
         error.style.display = 'none';
         treeContainer.innerHTML = '';
         
-        allFolders = await fetchFolders();
+        // 如果强制重新加载，添加 reload=true 参数
+        allFolders = await fetchFolders(forceReload);
         
         loading.style.display = 'none';
         
@@ -698,15 +808,47 @@ async function loadTree() {
             });
         }
         
+        // 恢复展开状态
+        // 使用 setTimeout 确保 DOM 已完全渲染
+        setTimeout(() => {
+            restoreExpandedState();
+        }, 0);
+        
         // 默认选中首页并递归查找显示所有原型
         selectTreeNode(null);
-        const allPrototypes = await findAllPrototypes(allFolders);
-        allPrototypesCache = allPrototypes; // 缓存所有原型用于搜索
         
-        // 缓存所有目录（包括所有层级）用于搜索
-        allDirectoriesCache = await findAllDirectories(allFolders);
+        // 性能优化：先显示根目录的原型，然后异步加载其他原型
+        const rootPrototypes = allFolders.filter(f => f.hasIndex && f.indexFile);
+        if (rootPrototypes.length > 0) {
+            const rootPrototypesData = rootPrototypes.map(f => ({
+                name: f.name,
+                displayName: f.displayName || f.name,
+                path: f.path,
+                relativePath: f.path.replace(/^.*[\\/]首页自动化展示[\\/]/, '').replace(/\\/g, '/'),
+                modified: f.modified,
+                hasIndex: true,
+                indexFile: normalizeIndexUrl(f.indexFile)
+            }));
+            showAllPrototypes(rootPrototypesData);
+            allPrototypesCache = rootPrototypesData;
+        }
         
-        showAllPrototypes(allPrototypes);
+        // 异步加载所有原型（包括嵌套目录中的）
+        findAllPrototypes(allFolders).then(allPrototypes => {
+            allPrototypesCache = allPrototypes; // 更新全局缓存
+            showAllPrototypes(allPrototypes); // 更新显示
+        });
+        
+        // 缓存所有目录（包括所有层级）用于搜索（异步）
+        findAllDirectories(allFolders).then(directories => {
+            allDirectoriesCache = directories;
+        });
+        
+        // 确保首页节点被选中并高亮
+        const homeItem = document.querySelector('.tree-node-item[data-path="home"]');
+        if (homeItem) {
+            homeItem.classList.add('active');
+        }
         
     } catch (err) {
         console.error('加载失败:', err);
@@ -738,10 +880,10 @@ function showAllPrototypes(prototypes) {
     
     prototypes.forEach(proto => {
         html += `
-            <div class="prototype-card" data-path="${proto.path}" data-index-file="${proto.indexFile || ''}" data-name="${escapeHtml(proto.name)}">
+            <div class="prototype-card" data-path="${proto.path}" data-index-file="${proto.indexFile || ''}" data-name="${escapeHtml(proto.name)}" data-is-linked="${proto.isLinked || false}">
                 <div class="prototype-card-header">
-                    <div class="prototype-icon">🌐</div>
-                    <div class="prototype-badge">原型</div>
+                    <div class="prototype-icon">${proto.isLinked ? '🔗' : '🌐'}</div>
+                    <div class="prototype-badge">${proto.isLinked ? '链接' : '原型'}</div>
                 </div>
                 <div class="prototype-card-body">
                     <div class="prototype-name-wrapper">
@@ -760,7 +902,7 @@ function showAllPrototypes(prototypes) {
                     <p class="prototype-time">${formatDate(proto.modified)}</p>
                 </div>
                 <div class="prototype-card-footer">
-                    <button class="prototype-btn" onclick="window.open('${proto.indexFile}', '_blank')">
+                    <button class="prototype-btn" onclick="${proto.isLinked ? `window.open('${proto.indexFile}', '_blank')` : `window.open('${proto.indexFile}', '_blank')`}">
                         打开演示
                     </button>
                     <div class="prototype-more-actions">
@@ -772,6 +914,7 @@ function showAllPrototypes(prototypes) {
                             </svg>
                         </button>
                         <div class="prototype-more-menu" style="display: none;">
+                            ${!proto.isLinked ? `
                             <button class="prototype-more-item" onclick="showReuploadDialog('${proto.path}'); closeMoreActions(this);" title="重新上传文件">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -780,7 +923,28 @@ function showAllPrototypes(prototypes) {
                                 </svg>
                                 重新上传
                             </button>
-                            <button class="prototype-more-item prototype-more-delete" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="删除原型">
+                            <button class="prototype-more-item" onclick="showResyncGitDialog('${proto.path}'); closeMoreActions(this);" title="重新同步Git仓库">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                重新同步Git
+                            </button>
+                            <button class="prototype-more-item" onclick="rebuildPrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="重新编译项目">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                重新编译
+                            </button>
+                            <button class="prototype-more-item" onclick="downloadPrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="下载原型文件">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                下载原型文件
+                            </button>
+                            ` : ''}
+                            <button class="prototype-more-item prototype-more-delete" onclick="${proto.isLinked ? `deleteLinkedPrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);` : `deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);`}" title="删除${proto.isLinked ? '链接' : '原型'}">
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1051,6 +1215,26 @@ function setupSearch() {
                                                     <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                                 </svg>
                                                 重新上传
+                                            </button>
+                                            <button class="prototype-more-item" onclick="showResyncGitDialog('${proto.path}'); closeMoreActions(this);" title="重新同步Git仓库">
+                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                重新同步Git
+                                            </button>
+                                            <button class="prototype-more-item" onclick="rebuildPrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="重新编译项目">
+                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                重新编译
+                                            </button>
+                                            <button class="prototype-more-item" onclick="downloadPrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="下载原型文件">
+                                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                下载原型文件
                                             </button>
                                             <button class="prototype-more-item prototype-more-delete" onclick="deletePrototype('${proto.path}', '${escapeHtml(proto.displayName || proto.name)}'); closeMoreActions(this);" title="删除原型">
                                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1359,6 +1543,136 @@ function closeMoreActions(btn) {
     }
 }
 
+// 下载原型文件
+async function downloadPrototype(prototypePath, prototypeName) {
+    try {
+        console.log('[下载原型] 开始下载:', prototypePath, prototypeName);
+        
+        // 显示加载提示
+        const loadingMsg = `正在打包项目 "${prototypeName}"...\n\n请稍候，这可能需要一些时间。`;
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'download-loading';
+        loadingDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 10000; max-width: 400px; text-align: center;';
+        loadingDiv.innerHTML = `
+            <div style="margin-bottom: 20px;">
+                <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+            </div>
+            <p style="margin: 0; font-size: 16px; color: #333;">${loadingMsg}</p>
+            <div id="download-status" style="margin-top: 15px; font-size: 14px; color: #666;"></div>
+        `;
+        document.body.appendChild(loadingDiv);
+        
+        // 添加旋转动画
+        if (!document.getElementById('download-spinner-style')) {
+            const style = document.createElement('style');
+            style.id = 'download-spinner-style';
+            style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+            document.head.appendChild(style);
+        }
+        
+        const statusDiv = document.getElementById('download-status');
+        statusDiv.textContent = '正在连接服务器...';
+        
+        // 调用后端 API 下载
+        const response = await fetch('/api/prototypes/download', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                path: prototypePath
+            })
+        });
+        
+        console.log('[下载原型] 响应状态:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `下载失败: HTTP ${response.status}`;
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.error || errorMessage;
+            } catch (e) {
+                if (errorText && !errorText.includes('<!DOCTYPE')) {
+                    errorMessage = errorText.substring(0, 200);
+                } else {
+                    errorMessage = `服务器返回了错误页面 (HTTP ${response.status})，可能是 API 路由不存在`;
+                }
+            }
+            throw new Error(errorMessage);
+        }
+        
+        statusDiv.textContent = '正在打包文件...';
+        
+        // 获取文件名（从 Content-Disposition 头或使用默认名称）
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let fileName = `${prototypeName || 'prototype'}.zip`;
+        if (contentDisposition) {
+            const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (fileNameMatch && fileNameMatch[1]) {
+                fileName = fileNameMatch[1].replace(/['"]/g, '');
+                // 处理 URL 编码的文件名
+                try {
+                    fileName = decodeURIComponent(fileName);
+                } catch (e) {
+                    // 如果解码失败，使用原始文件名
+                }
+            }
+        }
+        
+        console.log('[下载原型] 文件名:', fileName);
+        statusDiv.textContent = '正在下载文件...';
+        
+        // 获取文件 blob
+        const blob = await response.blob();
+        console.log('[下载原型] Blob 大小:', blob.size, 'bytes');
+        
+        if (blob.size === 0) {
+            throw new Error('下载的文件为空，可能是打包失败');
+        }
+        
+        // 创建下载链接
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        
+        // 清理
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+        
+        statusDiv.textContent = '下载成功！';
+        statusDiv.style.color = '#27ae60';
+        
+        setTimeout(() => {
+            loadingDiv.remove();
+            alert(`项目 "${prototypeName}" 下载成功！\n\n文件名: ${fileName}`);
+        }, 1000);
+        
+    } catch (error) {
+        console.error('下载原型失败:', error);
+        const loadingDiv = document.getElementById('download-loading');
+        if (loadingDiv) {
+            const statusDiv = document.getElementById('download-status');
+            if (statusDiv) {
+                statusDiv.textContent = `下载失败: ${error.message}`;
+                statusDiv.style.color = '#e74c3c';
+            }
+            setTimeout(() => {
+                loadingDiv.remove();
+                alert(`下载失败: ${error.message}`);
+            }, 2000);
+        } else {
+            alert(`下载失败: ${error.message}`);
+        }
+    }
+}
+
 // 初始化目录操作表单
 function setupFolderForm() {
     const folderForm = document.getElementById('folderForm');
@@ -1653,14 +1967,101 @@ function setupUploadForm() {
             }
         } else {
             // 文件夹上传模式：保留文件夹结构
-            // 方案：使用文件索引作为标识，传递完整的文件信息
+            // 优化：对于大量文件，使用分批上传
             
             // 1. 提取文件夹名称
             const folderName = files.length > 0 && files[0].webkitRelativePath 
                 ? files[0].webkitRelativePath.split('/')[0] 
                 : 'uploaded';
             
-            // 2. 收集所有文件信息
+            // 2. 检查文件数量，决定是否分批上传
+            const FILE_COUNT_THRESHOLD = 100; // 超过100个文件使用分批上传
+            const BATCH_SIZE = 50; // 每批50个文件
+            const MAX_CONCURRENT_BATCHES = 2; // 最多同时上传2批
+            
+            // 先创建进度显示（分批上传也需要）
+            submitBtn.disabled = true;
+            submitBtn.textContent = '上传中...';
+            
+            const progressContainer = document.createElement('div');
+            progressContainer.className = 'upload-progress-container';
+            progressContainer.style.cssText = 'margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px;';
+            progressContainer.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 14px; color: #666;">上传进度</span>
+                    <span id="upload-progress-text" style="font-size: 14px; color: #333; font-weight: bold;">0%</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                    <div id="upload-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4CAF50, #45a049); transition: width 0.3s ease; border-radius: 4px;"></div>
+                </div>
+                <div id="upload-status-text" style="margin-top: 8px; font-size: 12px; color: #999;">准备上传...</div>
+            `;
+            const uploadModalBody = document.querySelector('.upload-modal-body');
+            uploadModalBody.appendChild(progressContainer);
+            
+            const progressBar = document.getElementById('upload-progress-bar');
+            const progressText = document.getElementById('upload-progress-text');
+            const statusText = document.getElementById('upload-status-text');
+            
+            if (files.length > FILE_COUNT_THRESHOLD) {
+                // 使用分批上传
+                console.log(`[前端] 文件数量较多(${files.length}个)，使用分批上传`);
+                try {
+                    const uploadResult = await uploadFilesInBatches(files, folderName, targetPath, BATCH_SIZE, MAX_CONCURRENT_BATCHES, progressBar, progressText, statusText);
+                    
+                    if (uploadResult && uploadResult.success) {
+                        progressBar.style.background = 'linear-gradient(90deg, #4CAF50, #45a049)';
+                        progressBar.style.width = '100%';
+                        progressText.textContent = '100%';
+                        statusText.textContent = `上传成功！已上传 ${uploadResult.count || files.length} 个文件`;
+                        statusText.style.color = '#4CAF50';
+                        
+                        setTimeout(() => {
+                            closeUploadDialog();
+                            // 重新加载树和内容
+                            if (currentPath === null) {
+                                showRootContent();
+                            } else {
+                                const activeNode = document.querySelector('.tree-node-item.active');
+                                if (activeNode && activeNode.dataset.path !== 'home') {
+                                    const folder = {
+                                        name: activeNode.querySelector('.tree-node-name').textContent,
+                                        displayName: activeNode.querySelector('.tree-node-name').textContent,
+                                        path: activeNode.dataset.path,
+                                        hasIndex: false,
+                                        indexFile: null
+                                    };
+                                    showFolderDetail(folder);
+                                }
+                            }
+                            loadTree();
+                        }, 1000);
+                    } else {
+                        progressBar.style.background = '#e74c3c';
+                        statusText.textContent = '上传失败：' + (uploadResult?.error || '未知错误');
+                        statusText.style.color = '#e74c3c';
+                        alert('上传失败：' + (uploadResult?.error || '未知错误'));
+                    }
+                } catch (err) {
+                    console.error('分批上传失败:', err);
+                    progressBar.style.background = '#e74c3c';
+                    statusText.textContent = '上传失败：' + err.message;
+                    statusText.style.color = '#e74c3c';
+                    alert('上传失败：' + err.message);
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    setTimeout(() => {
+                        if (progressContainer.parentNode) {
+                            progressContainer.remove();
+                        }
+                    }, 3000);
+                }
+                return; // 分批上传函数已处理后续逻辑
+            }
+            
+            // 3. 少量文件：使用原有方式（一次性上传）
+            // 收集所有文件信息
             const filesInfo = [];
             const directoryPaths = new Set(); // 用于收集所有需要创建的目录路径
             
@@ -1705,7 +2106,7 @@ function setupUploadForm() {
                 formData.append('files', file, `file_${i}`);
             }
             
-            // 3. 传递文件信息和目录路径
+            // 4. 传递文件信息和目录路径
             formData.append('folderName', folderName);
             formData.append('filesInfo', JSON.stringify(filesInfo));
             formData.append('directoryPaths', JSON.stringify(Array.from(directoryPaths)));
@@ -1726,52 +2127,576 @@ function setupUploadForm() {
         submitBtn.disabled = true;
         submitBtn.textContent = '上传中...';
         
+        // 创建进度显示
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'upload-progress-container';
+        progressContainer.style.cssText = 'margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px;';
+        progressContainer.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 14px; color: #666;">上传进度</span>
+                <span id="upload-progress-text" style="font-size: 14px; color: #333; font-weight: bold;">0%</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                <div id="upload-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4CAF50, #45a049); transition: width 0.3s ease; border-radius: 4px;"></div>
+            </div>
+            <div id="upload-status-text" style="margin-top: 8px; font-size: 12px; color: #999;">准备上传...</div>
+        `;
+        const uploadModalBody = document.querySelector('.upload-modal-body');
+        uploadModalBody.appendChild(progressContainer);
+        
+        const progressBar = document.getElementById('upload-progress-bar');
+        const progressText = document.getElementById('upload-progress-text');
+        const statusText = document.getElementById('upload-status-text');
+        
         try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
+            // 初始状态更新
+            statusText.textContent = '正在连接服务器...';
+            progressBar.style.width = '1%'; // 至少显示1%以便看到进度条
+            progressText.textContent = '0%';
+            
+            // 使用 XMLHttpRequest 以支持进度显示和自动重试
+            const uploadResult = await uploadWithProgress(formData, (percent, loaded, total) => {
+                console.log('[进度回调执行]', { percent, loaded, total });
+                
+                // 强制更新进度条（即使percent为0也显示最小宽度）
+                const displayPercent = Math.max(1, percent); // 至少显示1%以便看到进度条
+                progressBar.style.width = displayPercent + '%';
+                progressText.textContent = percent + '%';
+                
+                // 更新状态文本
+                if (total > 0) {
+                    const loadedMB = (loaded / 1024 / 1024).toFixed(2);
+                    const totalMB = (total / 1024 / 1024).toFixed(2);
+                    statusText.textContent = `已上传 ${loadedMB} MB / ${totalMB} MB (${percent}%)`;
+                } else if (loaded > 0) {
+                    const loadedMB = (loaded / 1024 / 1024).toFixed(2);
+                    statusText.textContent = `已上传 ${loadedMB} MB...`;
+                } else {
+                    statusText.textContent = '正在上传...';
+                }
+                
+                // 强制浏览器重绘
+                void progressBar.offsetHeight; // 触发重绘
             });
             
-            const data = await response.json();
-            
-            if (data.success) {
-                alert(`上传成功！已上传 ${data.count || 1} 个文件`);
-                closeUploadDialog();
-                // 重新加载树和内容
-                if (currentPath === null) {
-                    await showRootContent();
-                } else {
-                    const activeNode = document.querySelector('.tree-node-item.active');
-                    if (activeNode && activeNode.dataset.path !== 'home') {
-                        const folder = {
-                            name: activeNode.querySelector('.tree-node-name').textContent,
-                            displayName: activeNode.querySelector('.tree-node-name').textContent,
-                            path: activeNode.dataset.path,
-                            hasIndex: false,
-                            indexFile: null
-                        };
-                        await showFolderDetail(folder);
+            if (uploadResult.success) {
+                progressBar.style.background = 'linear-gradient(90deg, #4CAF50, #45a049)';
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+                statusText.textContent = `上传成功！已上传 ${uploadResult.count || 1} 个文件`;
+                statusText.style.color = '#4CAF50';
+                
+                setTimeout(() => {
+                    closeUploadDialog();
+                    // 重新加载树和内容
+                    if (currentPath === null) {
+                        showRootContent();
+                    } else {
+                        const activeNode = document.querySelector('.tree-node-item.active');
+                        if (activeNode && activeNode.dataset.path !== 'home') {
+                            const folder = {
+                                name: activeNode.querySelector('.tree-node-name').textContent,
+                                displayName: activeNode.querySelector('.tree-node-name').textContent,
+                                path: activeNode.dataset.path,
+                                hasIndex: false,
+                                indexFile: null
+                            };
+                            showFolderDetail(folder);
+                        }
                     }
-                }
-                loadTree();
+                    loadTree();
+                }, 1000);
             } else {
-                alert('上传失败：' + (data.error || '未知错误'));
+                progressBar.style.background = '#e74c3c';
+                statusText.textContent = '上传失败：' + (uploadResult.error || '未知错误');
+                statusText.style.color = '#e74c3c';
+                alert('上传失败：' + (uploadResult.error || '未知错误'));
             }
         } catch (err) {
             console.error('上传失败:', err);
-            alert('上传失败，请重试');
+            progressBar.style.background = '#e74c3c';
+            statusText.textContent = '上传失败：' + err.message;
+            statusText.style.color = '#e74c3c';
+            alert('上传失败：' + err.message);
         } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
+            // 3秒后移除进度条（如果还在）
+            setTimeout(() => {
+                if (progressContainer.parentNode) {
+                    progressContainer.remove();
+                }
+            }, 3000);
         }
     });
 }
 
 // 显示Git同步对话框
-async function showGitSyncDialog() {
+async function showGitSyncDialog(targetPath = null) {
     const modal = document.getElementById('gitSyncModal');
     const targetPathSelect = document.getElementById('gitTargetPath');
     const statusDiv = document.getElementById('gitSyncStatus');
+    
+    // 隐藏状态信息
+    statusDiv.style.display = 'none';
+    
+    // 获取所有可用目录
+    const directories = await getAllDirectoriesForUpload();
+    
+    // 清空并填充目录选择器
+    targetPathSelect.innerHTML = '';
+    directories.forEach(dir => {
+        const option = document.createElement('option');
+        option.value = dir.path;
+        option.textContent = '  '.repeat(dir.level) + dir.displayName;
+        targetPathSelect.appendChild(option);
+    });
+    
+    // 设置默认选中的目录（优先使用传入的targetPath，否则使用currentPath）
+    if (targetPath) {
+        targetPathSelect.value = targetPath;
+    } else if (currentPath) {
+        targetPathSelect.value = currentPath;
+    } else {
+        targetPathSelect.value = '';
+    }
+    
+    // 清空表单
+    document.getElementById('gitRepoUrl').value = '';
+    document.getElementById('gitBranch').value = '';
+    document.getElementById('gitUsername').value = '';
+    document.getElementById('gitPassword').value = '';
+    
+    modal.style.display = 'flex';
+}
+
+// 显示重新同步Git对话框（从原型卡片更多操作中调用）
+async function showResyncGitDialog(prototypePath) {
+    // 打开Git同步对话框，并预填目标路径为原型所在目录的父目录
+    // 在浏览器环境中，路径分隔符可能是 / 或 \
+    const pathParts = prototypePath.replace(/\\/g, '/').split('/');
+    const parentPath = pathParts.slice(0, -1).join('/') || '';
+    await showGitSyncDialog(parentPath);
+}
+
+// 重新编译原型项目
+async function rebuildPrototype(prototypePath, prototypeName) {
+    if (!confirm(`确定要重新编译项目 "${prototypeName}" 吗？\n\n这将自动识别项目类型并执行编译。`)) {
+        return;
+    }
+    
+    // 显示加载提示
+    const loadingMsg = `正在编译项目 "${prototypeName}"...\n\n这可能需要几分钟时间，请耐心等待。`;
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'rebuild-loading';
+    loadingDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 10000; max-width: 400px; text-align: center;';
+    loadingDiv.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+        </div>
+        <p style="margin: 0; font-size: 16px; color: #333;">${loadingMsg}</p>
+        <div id="rebuild-status" style="margin-top: 15px; font-size: 14px; color: #666;"></div>
+    `;
+    document.body.appendChild(loadingDiv);
+    
+    // 添加旋转动画
+    if (!document.getElementById('rebuild-spinner-style')) {
+        const style = document.createElement('style');
+        style.id = 'rebuild-spinner-style';
+        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+    }
+    
+    const statusDiv = document.getElementById('rebuild-status');
+    
+    try {
+        statusDiv.textContent = '正在识别项目类型...';
+        
+        // 使用与 Git 同步相同的自动处理 API
+        const response = await fetch('/api/project/auto-process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                projectPath: prototypePath  // 传递原型路径，API 会自动识别
+            })
+        });
+        
+        // 先读取响应文本（只能读取一次）
+        const responseText = await response.text();
+        
+        // 检查是否是 HTML（错误页面）
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+            const errorMessage = `服务器返回了 HTML 页面而不是 JSON (HTTP ${response.status})\n\n可能的原因：\n1. API 路由不存在\n2. 服务器内部错误\n3. 请求被重定向到错误页面\n\n请检查服务器日志或联系管理员。`;
+            throw new Error(errorMessage);
+        }
+        
+        // 解析 JSON 响应
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON 解析失败:', parseError);
+            console.error('响应内容:', responseText.substring(0, 500));
+            throw new Error(`响应解析失败: ${parseError.message}\n\n服务器返回的内容不是有效的 JSON 格式。\n请检查服务器日志。`);
+        }
+        
+        // 检查响应状态和业务逻辑
+        if (!response.ok) {
+            const errorMessage = data.error || data.message || `HTTP ${response.status}: ${response.statusText}`;
+            throw new Error(errorMessage);
+        }
+        
+        if (data.success) {
+            statusDiv.textContent = '编译成功！';
+            statusDiv.style.color = '#27ae60';
+            
+            setTimeout(() => {
+                loadingDiv.remove();
+                const message = `项目 "${prototypeName}" 编译成功！\n\n项目类型: ${data.results?.detection?.type || '未知'}\n${data.results?.build?.message || ''}`;
+                alert(message);
+                
+                // 清除缓存并刷新页面以显示最新状态
+                loadTree(true);
+                if (currentPath) {
+                    const folder = allFolders.find(f => f.path === currentPath);
+                    if (folder) {
+                        showFolderDetail(folder);
+                    }
+                } else {
+                    showRootContent();
+                }
+            }, 1500);
+        } else {
+            statusDiv.textContent = `编译失败: ${data.error || '未知错误'}`;
+            statusDiv.style.color = '#e74c3c';
+            
+            setTimeout(() => {
+                loadingDiv.remove();
+                alert(`编译失败: ${data.error || '未知错误'}\n\n${data.details || ''}`);
+            }, 3000);
+        }
+    } catch (error) {
+        console.error('重新编译失败:', error);
+        statusDiv.textContent = `请求失败: ${error.message}`;
+        statusDiv.style.color = '#e74c3c';
+        
+        setTimeout(() => {
+            loadingDiv.remove();
+            alert(`重新编译失败: ${error.message}`);
+        }, 3000);
+    }
+}
+
+// 关闭Git同步对话框
+function closeGitSyncDialog() {
+    const modal = document.getElementById('gitSyncModal');
+    modal.style.display = 'none';
+}
+
+// 分批上传文件（用于大量文件上传，避免卡顿）
+async function uploadFilesInBatches(files, folderName, targetPath, batchSize = 50, maxConcurrent = 2, progressBar, progressText, statusText) {
+    // 将 FileList 转换为数组（FileList 没有 slice 方法）
+    const filesArray = Array.from(files);
+    const totalFiles = filesArray.length;
+    const batches = [];
+    
+    console.log(`[分批上传] 开始分批上传，总文件数: ${totalFiles}, 批次大小: ${batchSize}`);
+    
+    // 1. 预处理：收集所有文件信息和目录路径（使用异步处理避免阻塞）
+    statusText.textContent = '正在处理文件列表...';
+    progressBar.style.width = '5%';
+    progressText.textContent = '0%';
+    
+    const allFilesInfo = [];
+    const allDirectoryPaths = new Set();
+    
+    // 使用异步分批处理，避免阻塞主线程
+    const processFileBatch = async (startIndex, endIndex) => {
+        for (let i = startIndex; i < endIndex; i++) {
+            const file = filesArray[i];
+            const relativePath = file.webkitRelativePath || file.name;
+            const normalizedPath = relativePath.replace(/\\/g, '/');
+            const parts = normalizedPath.split('/').filter(p => p);
+            
+            const fileFolderName = parts[0];
+            const fileName = parts[parts.length - 1];
+            const dirParts = parts.slice(1, -1);
+            const directoryPath = dirParts.join('/');
+            
+            allFilesInfo.push({
+                index: i,
+                relativePath: relativePath,
+                fileName: fileName,
+                directoryPath: directoryPath,
+                folderName: fileFolderName
+            });
+            
+            // 收集目录路径
+            if (dirParts.length > 0) {
+                let currentDir = '';
+                for (const dir of dirParts) {
+                    currentDir = currentDir ? `${currentDir}/${dir}` : dir;
+                    allDirectoryPaths.add(currentDir);
+                }
+            }
+        }
+    };
+    
+    // 分批处理文件信息（每批100个，避免一次性处理太多）
+    const PROCESS_BATCH_SIZE = 100;
+    for (let i = 0; i < filesArray.length; i += PROCESS_BATCH_SIZE) {
+        const end = Math.min(i + PROCESS_BATCH_SIZE, filesArray.length);
+        await processFileBatch(i, end);
+        
+        // 更新进度
+        const processPercent = Math.round((end / totalFiles) * 100);
+        progressBar.style.width = Math.max(5, processPercent * 0.1) + '%'; // 预处理占10%
+        statusText.textContent = `正在处理文件列表... ${end} / ${totalFiles}`;
+        
+        // 让出主线程
+        await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    
+    console.log(`[分批上传] 文件信息处理完成，共 ${allFilesInfo.length} 个文件`);
+    
+    // 2. 将文件分批
+    for (let i = 0; i < filesArray.length; i += batchSize) {
+        batches.push({
+            files: filesArray.slice(i, i + batchSize),
+            filesInfo: allFilesInfo.slice(i, i + batchSize),
+            startIndex: i,
+            endIndex: Math.min(i + batchSize, filesArray.length)
+        });
+    }
+    
+    console.log(`[分批上传] 共分为 ${batches.length} 批`);
+    
+    // 3. 先创建目录结构（一次性创建所有目录）
+    statusText.textContent = '正在创建目录结构...';
+    progressBar.style.width = '10%';
+    
+    const createDirFormData = new FormData();
+    createDirFormData.append('targetPath', targetPath || '');
+    createDirFormData.append('folderName', folderName);
+    createDirFormData.append('directoryPaths', JSON.stringify(Array.from(allDirectoryPaths)));
+    createDirFormData.append('filesInfo', JSON.stringify(allFilesInfo));
+    createDirFormData.append('createDirectoriesOnly', 'true'); // 标记：只创建目录，不上传文件
+    
+    try {
+        await fetch('/api/upload', {
+            method: 'POST',
+            body: createDirFormData
+        });
+        console.log('[分批上传] 目录结构创建完成');
+    } catch (err) {
+        console.error('[分批上传] 创建目录失败:', err);
+        // 继续执行，让后端在上传时创建目录
+    }
+    
+    // 4. 分批上传文件
+    let uploadedCount = 0;
+    const results = [];
+    const totalBatches = batches.length;
+    
+    statusText.textContent = `开始上传文件... (0 / ${totalFiles})`;
+    progressBar.style.width = '10%';
+    
+    // 并行上传批次（限制并发数）
+    for (let i = 0; i < batches.length; i += maxConcurrent) {
+        const currentBatches = batches.slice(i, i + maxConcurrent);
+        
+        const batchPromises = currentBatches.map(async (batch, batchIndex) => {
+            const batchFormData = new FormData();
+            batchFormData.append('targetPath', targetPath || '');
+            batchFormData.append('folderName', folderName);
+            batchFormData.append('isBatch', 'true'); // 标记：这是批次上传
+            batchFormData.append('batchIndex', (i + batchIndex).toString());
+            batchFormData.append('batchStartIndex', batch.startIndex.toString());
+            
+            // 添加批次文件信息
+            batchFormData.append('filesInfo', JSON.stringify(batch.filesInfo));
+            
+            // 添加批次文件
+            batch.files.forEach((file, fileIndex) => {
+                const globalIndex = batch.startIndex + fileIndex;
+                batchFormData.append('files', file, `file_${globalIndex}`);
+            });
+            
+            console.log(`[分批上传] 上传批次 ${i + batchIndex + 1}/${totalBatches}, 文件数: ${batch.files.length}`);
+            
+            // 上传批次
+            const result = await uploadWithProgress(batchFormData, (percent, loaded, total) => {
+                // 计算总体进度
+                const batchProgress = percent / 100; // 当前批次进度 0-1
+                const batchWeight = batch.files.length / totalFiles; // 当前批次权重
+                const overallProgress = (uploadedCount / totalFiles) + (batchProgress * batchWeight);
+                const overallPercent = Math.round(overallProgress * 100);
+                
+                progressBar.style.width = Math.max(10, overallPercent) + '%';
+                progressText.textContent = overallPercent + '%';
+                statusText.textContent = `正在上传... (${uploadedCount + Math.round(batchProgress * batch.files.length)} / ${totalFiles})`;
+            });
+            
+            uploadedCount += batch.files.length;
+            console.log(`[分批上传] 批次 ${i + batchIndex + 1} 上传完成，已上传: ${uploadedCount}/${totalFiles}`);
+            
+            return result;
+        });
+        
+        await Promise.all(batchPromises);
+    }
+    
+    console.log(`[分批上传] 所有批次上传完成，共 ${uploadedCount} 个文件`);
+    
+    // 5. 返回成功结果
+    return {
+        success: true,
+        count: uploadedCount,
+        message: `成功上传 ${uploadedCount} 个文件`
+    };
+}
+
+// 带进度显示和自动重试的上传函数（使用 XMLHttpRequest）
+function uploadWithProgress(formData, onProgress, maxRetries = 3) {
+    return new Promise((resolve, reject) => {
+        let retryCount = 0;
+        
+        const attemptUpload = () => {
+            const xhr = new XMLHttpRequest();
+            
+            // 监听上传进度
+            xhr.upload.addEventListener('progress', (e) => {
+                console.log('[上传进度事件]', {
+                    lengthComputable: e.lengthComputable,
+                    loaded: e.loaded,
+                    total: e.total,
+                    percent: e.lengthComputable && e.total > 0 ? Math.round((e.loaded / e.total) * 100) : 'N/A'
+                });
+                
+                if (onProgress) {
+                    if (e.lengthComputable && e.total > 0) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        console.log('[调用进度回调]', { percent, loaded: e.loaded, total: e.total });
+                        onProgress(percent, e.loaded, e.total);
+                    } else if (e.loaded > 0) {
+                        // 如果无法计算总大小，至少显示已上传的字节数
+                        const loadedMB = (e.loaded / 1024 / 1024).toFixed(2);
+                        // 使用一个估算的进度（基于已上传的数据量）
+                        // 假设总大小至少是已上传的2倍（保守估计）
+                        const estimatedTotal = e.loaded * 2;
+                        const percent = Math.min(50, Math.round((e.loaded / estimatedTotal) * 100));
+                        console.log('[调用进度回调-估算]', { percent, loaded: e.loaded, total: estimatedTotal });
+                        onProgress(percent, e.loaded, estimatedTotal);
+                    } else {
+                        // 即使没有数据，也更新为0%以显示正在上传
+                        console.log('[调用进度回调-初始]', { percent: 0, loaded: 0, total: 0 });
+                        onProgress(0, 0, 0);
+                    }
+                }
+            });
+            
+            // 监听加载开始（立即更新状态）
+            xhr.upload.addEventListener('loadstart', () => {
+                console.log('[上传开始] 开始上传文件');
+                if (onProgress) {
+                    console.log('[loadstart] 调用进度回调');
+                    onProgress(0, 0, 0);
+                }
+            });
+            
+            // 监听加载结束
+            xhr.upload.addEventListener('loadend', () => {
+                console.log('[上传结束] 上传完成');
+            });
+            
+            // 监听完成
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        resolve(data);
+                    } catch (e) {
+                        if (retryCount < maxRetries) {
+                            retryCount++;
+                            // 指数退避：1s, 2s, 4s
+                            const delay = Math.pow(2, retryCount - 1) * 1000;
+                            setTimeout(attemptUpload, delay);
+                        } else {
+                            reject(new Error('响应解析失败'));
+                        }
+                    }
+                } else {
+                    if (retryCount < maxRetries && xhr.status >= 500) {
+                        // 服务器错误，重试
+                        retryCount++;
+                        const delay = Math.pow(2, retryCount - 1) * 1000;
+                        setTimeout(attemptUpload, delay);
+                    } else {
+                        try {
+                            const errorData = JSON.parse(xhr.responseText);
+                            reject(new Error(errorData.error || `上传失败: HTTP ${xhr.status}`));
+                        } catch (e) {
+                            reject(new Error(`上传失败: HTTP ${xhr.status}`));
+                        }
+                    }
+                }
+            });
+            
+            // 监听错误
+            xhr.addEventListener('error', () => {
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    const delay = Math.pow(2, retryCount - 1) * 1000;
+                    setTimeout(attemptUpload, delay);
+                } else {
+                    reject(new Error('网络错误，请检查网络连接'));
+                }
+            });
+            
+            // 监听超时
+            xhr.addEventListener('timeout', () => {
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    const delay = Math.pow(2, retryCount - 1) * 1000;
+                    setTimeout(attemptUpload, delay);
+                } else {
+                    reject(new Error('上传超时，请重试'));
+                }
+            });
+            
+            // 设置超时时间（10分钟）
+            xhr.timeout = 600000;
+            
+            xhr.open('POST', '/api/upload');
+            
+            // 在发送前立即触发一次进度更新（0%）
+            if (onProgress) {
+                // 立即更新一次
+                console.log('[发送前] 调用进度回调');
+                onProgress(0, 0, 0);
+                // 延迟再更新一次，确保UI刷新
+                setTimeout(() => {
+                    console.log('[发送前-延迟] 调用进度回调');
+                    onProgress(0, 0, 0);
+                }, 100);
+            }
+            
+            console.log('[上传] 开始发送请求');
+            xhr.send(formData);
+            console.log('[上传] 请求已发送');
+        };
+        
+        attemptUpload();
+    });
+}
+
+// 显示链接到原型对话框
+async function showLinkPrototypeDialog() {
+    const modal = document.getElementById('linkPrototypeModal');
+    const targetPathSelect = document.getElementById('linkPrototypeTargetPath');
+    const statusDiv = document.getElementById('linkPrototypeStatus');
     
     // 隐藏状态信息
     statusDiv.style.display = 'none';
@@ -1796,18 +2721,101 @@ async function showGitSyncDialog() {
     }
     
     // 清空表单
-    document.getElementById('gitRepoUrl').value = '';
-    document.getElementById('gitBranch').value = '';
-    document.getElementById('gitUsername').value = '';
-    document.getElementById('gitPassword').value = '';
+    document.getElementById('linkPrototypeName').value = '';
+    document.getElementById('linkPrototypeUrl').value = '';
     
     modal.style.display = 'flex';
 }
 
-// 关闭Git同步对话框
-function closeGitSyncDialog() {
-    const modal = document.getElementById('gitSyncModal');
+// 关闭链接到原型对话框
+function closeLinkPrototypeDialog() {
+    const modal = document.getElementById('linkPrototypeModal');
     modal.style.display = 'none';
+}
+
+// 初始化链接到原型表单
+function setupLinkPrototypeForm() {
+    const linkPrototypeForm = document.getElementById('linkPrototypeForm');
+    const statusDiv = document.getElementById('linkPrototypeStatus');
+    
+    linkPrototypeForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = linkPrototypeForm.querySelector('.link-prototype-submit-btn');
+        const originalText = submitBtn.textContent;
+        const name = document.getElementById('linkPrototypeName').value.trim();
+        const url = document.getElementById('linkPrototypeUrl').value.trim();
+        const targetPath = document.getElementById('linkPrototypeTargetPath').value;
+        
+        if (!name || !url) {
+            statusDiv.textContent = '请填写原型名称和链接地址';
+            statusDiv.className = 'link-prototype-status error';
+            statusDiv.style.display = 'block';
+            return;
+        }
+        
+        // 验证 URL 格式
+        try {
+            new URL(url);
+        } catch (e) {
+            statusDiv.textContent = '请输入有效的链接地址';
+            statusDiv.className = 'link-prototype-status error';
+            statusDiv.style.display = 'block';
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = '保存中...';
+        statusDiv.style.display = 'none';
+        
+        try {
+            const response = await fetch('/api/prototypes/link', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name,
+                    url,
+                    targetPath: targetPath || ''
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                statusDiv.textContent = '链接原型保存成功！';
+                statusDiv.className = 'link-prototype-status success';
+                statusDiv.style.display = 'block';
+                
+                // 延迟关闭对话框并刷新
+                setTimeout(() => {
+                    closeLinkPrototypeDialog();
+                    // 刷新目录树和原型列表（链接原型现在会被自动识别）
+                    loadTree(true);
+                    if (currentPath === null) {
+                        showRootContent();
+                    } else {
+                        // 如果当前在某个目录，也刷新一下
+                        showRootContent();
+                    }
+                }, 1500);
+            } else {
+                statusDiv.textContent = '保存失败：' + (data.error || '未知错误');
+                statusDiv.className = 'link-prototype-status error';
+                statusDiv.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        } catch (error) {
+            console.error('保存链接原型失败:', error);
+            statusDiv.textContent = '保存失败：' + error.message;
+            statusDiv.className = 'link-prototype-status error';
+            statusDiv.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    });
 }
 
 // 初始化Git同步表单
@@ -1858,8 +2866,58 @@ function setupGitSyncForm() {
             const data = await response.json();
             
             if (data.success) {
+                // 新同步的目录已自动识别为原型，刷新目录树
                 statusDiv.textContent = `同步成功！${data.message || ''}`;
                 statusDiv.className = 'git-sync-status success';
+                
+                // 立即刷新目录树（不使用缓存，强制重新识别）
+                await loadTree(true);
+                
+                // 如果需要自动处理项目
+                if (data.autoProcess && data.path) {
+                    statusDiv.textContent = '同步成功！正在自动识别项目类型...';
+                    statusDiv.className = 'git-sync-status info';
+                    
+                    // 调用自动处理API
+                    try {
+                        // 将绝对路径转换为相对路径（相对于服务器根目录）
+                        const projectPath = data.path;
+                        const processResponse = await fetch('/api/project/auto-process', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                projectPath: projectPath
+                            })
+                        });
+                        
+                        const processData = await processResponse.json();
+                        
+                        if (processData.success) {
+                            let message = '项目处理完成！';
+                            if (processData.results.install && !processData.results.install.skipped) {
+                                message += ' 依赖已安装。';
+                            }
+                            if (processData.results.build && !processData.results.build.skipped) {
+                                message += ' 项目已构建。';
+                            }
+                            if (processData.accessUrl) {
+                                message += ` 访问地址: ${processData.accessUrl}`;
+                            }
+                            
+                            statusDiv.textContent = message;
+                            statusDiv.className = 'git-sync-status success';
+                        } else {
+                            statusDiv.textContent = `项目处理失败：${processData.error || '未知错误'}`;
+                            statusDiv.className = 'git-sync-status error';
+                        }
+                    } catch (processError) {
+                        console.error('自动处理失败:', processError);
+                        statusDiv.textContent = `同步成功，但自动处理失败：${processError.message}`;
+                        statusDiv.className = 'git-sync-status error';
+                    }
+                }
                 
                 // 延迟关闭对话框并刷新
                 setTimeout(() => {
@@ -1880,8 +2938,8 @@ function setupGitSyncForm() {
                             showFolderDetail(folder);
                         }
                     }
-                    loadTree();
-                }, 2000);
+                    loadTree(true);
+                }, 3000);
             } else {
                 statusDiv.textContent = `同步失败：${data.error || '未知错误'}`;
                 statusDiv.className = 'git-sync-status error';
@@ -1904,6 +2962,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupUploadForm();
     setupFolderForm();
     setupGitSyncForm();
+    setupLinkPrototypeForm();
     
     // 同步Git仓库按钮
     document.getElementById('syncGitBtn').addEventListener('click', () => {
@@ -1915,21 +2974,138 @@ document.addEventListener('DOMContentLoaded', () => {
         showUploadDialog(null);
     });
     
-    // 刷新按钮
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-        loadTree();
+    // 链接到原型按钮
+    document.getElementById('linkPrototypeBtn').addEventListener('click', () => {
+        showLinkPrototypeDialog();
     });
+    
+    // 刷新按钮（提示是否需要重新识别原型）
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+        if (confirm('需要重新识别原型吗？\n\n点击"确定"将清除识别缓存并重新扫描所有目录。\n点击"取消"将只刷新当前页面。')) {
+            try {
+                // 显示加载状态
+                const loading = document.getElementById('loading');
+                const treeContainer = document.getElementById('treeContainer');
+                loading.style.display = 'block';
+                treeContainer.innerHTML = '';
+                
+                // 显示识别状态
+                const statusDiv = document.createElement('div');
+                statusDiv.id = 'reloadStatus';
+                statusDiv.style.cssText = 'text-align: center; padding: 20px; color: #2196F3; font-size: 16px;';
+                statusDiv.textContent = '正在识别所有原型，请稍候...';
+                treeContainer.appendChild(statusDiv);
+                
+                // 调用重新识别API
+                const response = await fetch('/api/folders/reload-prototypes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusDiv.textContent = '识别完成，正在刷新页面...';
+                    statusDiv.style.color = '#4CAF50';
+                    
+                    // 等待一小段时间后刷新目录树
+                    setTimeout(async () => {
+                        // 强制重新加载（不使用缓存）
+                        await loadTree(true);
+                        loading.style.display = 'none';
+                    }, 500);
+                } else {
+                    statusDiv.textContent = '识别失败：' + (data.error || '未知错误');
+                    statusDiv.style.color = '#f44336';
+                    loading.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('重新识别失败:', error);
+                const statusDiv = document.getElementById('reloadStatus');
+                if (statusDiv) {
+                    statusDiv.textContent = '识别失败：' + error.message;
+                    statusDiv.style.color = '#f44336';
+                }
+                document.getElementById('loading').style.display = 'none';
+            }
+        } else {
+            // 用户取消，只执行普通刷新
+            loadTree();
+        }
+    });
+    
+    // 重新识别按钮（清除缓存并重新识别所有原型）
+    const reloadPrototypesBtn = document.getElementById('reloadPrototypesBtn');
+    if (reloadPrototypesBtn) {
+        reloadPrototypesBtn.addEventListener('click', async () => {
+            if (confirm('确定要重新识别所有原型吗？这将清除识别缓存并重新扫描所有目录。')) {
+                try {
+                    // 显示加载状态
+                    const loading = document.getElementById('loading');
+                    const treeContainer = document.getElementById('treeContainer');
+                    loading.style.display = 'block';
+                    treeContainer.innerHTML = '';
+                    
+                    // 显示识别状态
+                    const statusDiv = document.createElement('div');
+                    statusDiv.id = 'reloadStatus';
+                    statusDiv.style.cssText = 'text-align: center; padding: 20px; color: #2196F3; font-size: 16px;';
+                    statusDiv.textContent = '正在识别所有原型，请稍候...';
+                    treeContainer.appendChild(statusDiv);
+                    
+                    // 调用重新识别API
+                    const response = await fetch('/api/folders/reload-prototypes', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        statusDiv.textContent = '识别完成，正在刷新页面...';
+                        statusDiv.style.color = '#4CAF50';
+                        
+                        // 等待一小段时间后刷新目录树
+                        setTimeout(async () => {
+                            // 强制重新加载（不使用缓存）
+                            await loadTree(true);
+                            loading.style.display = 'none';
+                        }, 500);
+                    } else {
+                        statusDiv.textContent = '识别失败：' + (data.error || '未知错误');
+                        statusDiv.style.color = '#f44336';
+                        loading.style.display = 'none';
+                    }
+                } catch (err) {
+                    console.error('重新识别原型失败:', err);
+                    const statusDiv = document.getElementById('reloadStatus');
+                    if (statusDiv) {
+                        statusDiv.textContent = '识别失败，请重试：' + err.message;
+                        statusDiv.style.color = '#f44336';
+                    }
+                    const loading = document.getElementById('loading');
+                    if (loading) {
+                        loading.style.display = 'none';
+                    }
+                }
+            }
+        });
+    }
     
     // 版本历史按钮
     document.getElementById('versionHistoryBtn').addEventListener('click', () => {
         showVersionDialog();
     });
     
-    // 每30秒自动刷新
-    setInterval(loadTree, 30000);
+    // 每60秒自动刷新（优化：减少刷新频率）
+    setInterval(loadTree, 60000);
 });
 
-// 显示版本历史对话框
+// 显示版本历史对话框（性能优化：添加加载状态和错误处理）
 async function showVersionDialog() {
     const modal = document.getElementById('versionModal');
     const versionList = document.getElementById('versionList');
@@ -1938,27 +3114,46 @@ async function showVersionDialog() {
     versionList.innerHTML = '<div class="version-loading">加载中...</div>';
     
     try {
-        const response = await fetch('/api/versions');
+        // 性能优化：先快速加载前10条，然后可以加载更多
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+        
+        // 首次只加载10条，快速展示
+        const response = await fetch('/api/versions?limit=10', {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
         const data = await response.json();
         
         if (data.success && data.versions) {
-            renderVersionList(data.versions);
+            renderVersionList(data.versions, data.total, data.hasMore);
         } else {
             versionList.innerHTML = '<div class="version-loading">暂无版本记录</div>';
         }
     } catch (err) {
         console.error('加载版本历史失败:', err);
-        versionList.innerHTML = '<div class="version-loading">加载失败，请重试</div>';
+        if (err.name === 'AbortError') {
+            versionList.innerHTML = '<div class="version-loading">加载超时，请重试</div>';
+        } else {
+            versionList.innerHTML = '<div class="version-loading">加载失败，请重试</div>';
+        }
     }
 }
 
-// 渲染版本列表
-function renderVersionList(versions) {
+// 渲染版本列表（性能优化：支持分页提示）
+function renderVersionList(versions, total = null, hasMore = false) {
     const versionList = document.getElementById('versionList');
     
     if (versions.length === 0) {
         versionList.innerHTML = '<div class="version-loading">暂无版本记录</div>';
         return;
+    }
+    
+    // 如果有更多版本，显示提示
+    let headerInfo = '';
+    if (total !== null && total > versions.length) {
+        headerInfo = `<div class="version-info">显示最近 ${versions.length} 条记录，共 ${total} 条</div>`;
     }
     
     const actionMap = {
@@ -1970,7 +3165,7 @@ function renderVersionList(versions) {
         'restore': '恢复版本'
     };
     
-    versionList.innerHTML = versions.map(version => {
+    const versionHTML = versions.map(version => {
         const date = new Date(version.timestamp);
         const timeStr = date.toLocaleString('zh-CN', {
             year: 'numeric',
@@ -2014,13 +3209,61 @@ function renderVersionList(versions) {
         `;
     }).join('');
     
+    // 构建完整的HTML
+    let fullHTML = headerInfo + versionHTML;
+    
+    // 如果有更多版本，添加"加载更多"按钮
+    if (hasMore) {
+        fullHTML += `
+            <div class="version-load-more-section">
+                <button class="version-load-more-btn" onclick="loadMoreVersions(${versions.length}, ${total})">加载更多（还有 ${total - versions.length} 条）</button>
+            </div>
+        `;
+    }
+    
     // 如果有版本记录，添加清空按钮
     if (versions.length > 0) {
-        versionList.innerHTML += `
+        fullHTML += `
             <div class="version-clear-section">
                 <button class="version-clear-btn" onclick="clearVersionHistory()">清空所有版本记录</button>
             </div>
         `;
+    }
+    
+    versionList.innerHTML = fullHTML;
+}
+
+// 加载更多版本记录
+async function loadMoreVersions(currentCount, total) {
+    const versionList = document.getElementById('versionList');
+    const loadMoreBtn = versionList.querySelector('.version-load-more-btn');
+    
+    if (loadMoreBtn) {
+        loadMoreBtn.textContent = '加载中...';
+        loadMoreBtn.disabled = true;
+    }
+    
+    try {
+        // 加载更多：加载所有版本（或限制在合理范围内）
+        const limit = Math.min(total, 100); // 最多加载100条
+        const response = await fetch(`/api/versions?limit=${limit}`);
+        const data = await response.json();
+        
+        if (data.success && data.versions) {
+            // 重新渲染完整列表
+            renderVersionList(data.versions, data.total, data.hasMore);
+        } else {
+            if (loadMoreBtn) {
+                loadMoreBtn.textContent = '加载失败，请重试';
+                loadMoreBtn.disabled = false;
+            }
+        }
+    } catch (err) {
+        console.error('加载更多版本失败:', err);
+        if (loadMoreBtn) {
+            loadMoreBtn.textContent = '加载失败，请重试';
+            loadMoreBtn.disabled = false;
+        }
     }
 }
 

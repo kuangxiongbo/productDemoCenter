@@ -1,0 +1,175 @@
+{
+  "prototypes": {
+    "/Users/kuangxb/Desktop/首页自动化展示/看护产品业务": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164748279
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/基础设施业务线/透明加密网关": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164748334
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线/统一密码服务平台": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164748341
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线/统一密码服务平台/us-cryptography-service-platform": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764164748347
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/文件透明加解密系统": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164748349
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/子目录/子子目录": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1764164748352
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/数据脱敏与水印溯源平台/数据脱敏与水印平台": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1764164748355
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/生态合作业务线": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164048481
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764152749486
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线/密码态势感知平台": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764148730020
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线/数字证书认证平台": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764152451352
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/基础设施业务线/密码机": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764154158381
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/文件分发管控系统": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764160068389
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/数据脱敏与水印溯源平台": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764160068539
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/数据安全综合服务平台": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764152693234
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/子目录": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764152697271
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/基础设施业务线": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164089631
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164089936
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/test": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764143343522
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/sv": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1764164090153
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/基础设施业务线/sv": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764155877374
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/test/sv": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164748301
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/中文/sv": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764164748331
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/yinw/sv": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764138542993
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/test2/sv": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764158505260
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/test2": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764154289499
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/中文": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164089610
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/yingwen/sv": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764158332581
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/test3/sv": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764164748328
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/ts222/sv": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764164748326
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/3中文333/sv": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764164748322
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/aaa/sv": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1764162104418
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/test/sv/src": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164748316
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/test/sv/src/router": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1764164748319
+    }
+  },
+  "lastScan": null
+}

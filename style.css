@@ -105,6 +105,32 @@ body {
     display: block;
 }
 
+.resync-git-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
+}
+
+.resync-git-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+}
+
+.resync-git-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
 .version-history-btn {
     background: none;
     border: 1px solid #e0e0e0;
@@ -432,6 +458,32 @@ body {
 }
 
 .sync-git-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.link-prototype-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
+}
+
+.link-prototype-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+}
+
+.link-prototype-btn svg {
     width: 18px;
     height: 18px;
 }
@@ -1213,6 +1265,47 @@ body {
     color: #999;
 }
 
+.version-info {
+    padding: 12px 16px;
+    background: #f0f7ff;
+    border-left: 3px solid #1890ff;
+    margin-bottom: 16px;
+    color: #1890ff;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+.version-load-more-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    text-align: center;
+}
+
+.version-load-more-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.version-load-more-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.version-load-more-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .version-clear-section {
     margin-top: 24px;
     padding-top: 24px;
@@ -1462,7 +1555,7 @@ body {
 .git-sync-modal-close {
     background: none;
     border: none;
-    font-size: 2em;
+        font-size: 2em;
     color: #999;
     cursor: pointer;
     padding: 0;
@@ -1472,8 +1565,8 @@ body {
     align-items: center;
     justify-content: center;
     transition: color 0.2s;
-}
-
+    }
+    
 .git-sync-modal-close:hover {
     color: #333;
 }
@@ -1582,7 +1675,7 @@ body {
     background: #d4edda;
     color: #155724;
     border: 1px solid #c3e6cb;
-}
+    }
 
 .git-sync-status.error {
     background: #f8d7da;
@@ -1594,4 +1687,176 @@ body {
     background: #d1ecf1;
     color: #0c5460;
     border: 1px solid #bee5eb;
+}
+
+/* 链接到原型对话框样式 */
+.link-prototype-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.link-prototype-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.link-prototype-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.link-prototype-modal-header h3 {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.link-prototype-modal-close {
+    background: none;
+    border: none;
+    font-size: 2em;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.link-prototype-modal-close:hover {
+    color: #333;
+}
+
+.link-prototype-modal-body {
+    padding: 24px;
+}
+
+.link-prototype-input-wrapper {
+    margin-bottom: 20px;
+}
+
+.link-prototype-input-wrapper label {
+    display: block;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.link-prototype-name-input,
+.link-prototype-url-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.link-prototype-name-input:focus,
+.link-prototype-url-input:focus {
+    border-color: #f5576c;
+}
+
+.link-prototype-target-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    outline: none;
+    transition: border-color 0.2s;
+    background: white;
+}
+
+.link-prototype-target-select:focus {
+    border-color: #f5576c;
+}
+
+.link-prototype-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.link-prototype-cancel-btn,
+.link-prototype-submit-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.link-prototype-cancel-btn {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.link-prototype-cancel-btn:hover {
+    background: #e5e5e5;
+}
+
+.link-prototype-submit-btn {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.link-prototype-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+}
+
+.link-prototype-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.link-prototype-status {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.link-prototype-status.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.link-prototype-status.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.link-prototype-status.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
 }
