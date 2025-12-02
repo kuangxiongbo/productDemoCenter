@@ -1730,7 +1730,7 @@ body {
 .link-prototype-modal-close {
     background: none;
     border: none;
-    font-size: 2em;
+        font-size: 2em;
     color: #999;
     cursor: pointer;
     padding: 0;
@@ -1740,8 +1740,8 @@ body {
     align-items: center;
     justify-content: center;
     transition: color 0.2s;
-}
-
+    }
+    
 .link-prototype-modal-close:hover {
     color: #333;
 }
@@ -1841,7 +1841,7 @@ body {
     border-radius: 6px;
     font-size: 0.9em;
     text-align: center;
-}
+    }
 
 .link-prototype-status.info {
     background: #d1ecf1;

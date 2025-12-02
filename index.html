@@ -129,9 +129,11 @@
                             <label for="folderNameInput" id="folderNameLabel">目录名称：</label>
                             <input type="text" id="folderNameInput" name="folderName" class="folder-name-input" required />
                         </div>
+                        <!-- 进度与结果提示，统一显示在按钮上方 -->
+                        <div class="folder-status-text" id="folderStatus" style="margin-top:8px;font-size:12px;color:#999;min-height:16px;"></div>
                         <div class="folder-actions">
                             <button type="button" class="folder-cancel-btn" onclick="closeFolderDialog()">取消</button>
-                            <button type="submit" class="folder-submit-btn">确定</button>
+                            <button type="submit" class="folder-submit-btn" id="folderSubmitBtn">确定</button>
                         </div>
                         <!-- 隐藏字段，存储操作类型和目标路径 -->
                         <input type="hidden" id="folderOperation" name="operation" />

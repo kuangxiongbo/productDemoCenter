@@ -1,174 +1,80 @@
 {
   "prototypes": {
-    "/Users/kuangxb/Desktop/首页自动化展示/看护产品业务": {
+    "/Users/kuangxb/Desktop/首页自动化展示/资料": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764164748279
+      "modified": 1764638009202
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/基础设施业务线/透明加密网关": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764164748334
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线/统一密码服务平台": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764164748341
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线/统一密码服务平台/us-cryptography-service-platform": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764164748347
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/文件透明加解密系统": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764164748349
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/子目录/子子目录": {
+    "/Users/kuangxb/Desktop/首页自动化展示/us-cryptography-service-platform": {
       "hasIndex": true,
       "indexFile": "index.html",
-      "modified": 1764164748352
+      "modified": 1764637848405,
+      "gitConfig": {
+        "repoUrl": "http://192.168.206.15/unified-service/us-cryptography-service-platform.git",
+        "branch": "main",
+        "username": "kuangxb@myibc.net",
+        "targetPath": "/Users/kuangxb/Desktop/首页自动化展示"
+      }
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/数据脱敏与水印溯源平台/数据脱敏与水印平台": {
-      "hasIndex": true,
-      "indexFile": "index.html",
-      "modified": 1764164748355
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/生态合作业务线": {
+    "/Users/kuangxb/Desktop/首页自动化展示/子目录": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764164048481
+      "modified": 1764586718413
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线": {
+    "/Users/kuangxb/Desktop/首页自动化展示/中文/子目录": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764152749486
+      "modified": 1764638009214
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线/密码态势感知平台": {
+    "/Users/kuangxb/Desktop/首页自动化展示/子目录/子目录": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764148730020
+      "modified": 1764586056368
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线/数字证书认证平台": {
+    "/Users/kuangxb/Desktop/首页自动化展示/子目录/子目录2": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764152451352
+      "modified": 1764585831283
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/基础设施业务线/密码机": {
+    "/Users/kuangxb/Desktop/首页自动化展示/子目录/子子目录": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764154158381
+      "modified": 1764586301367
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/文件分发管控系统": {
+    "/Users/kuangxb/Desktop/首页自动化展示/子2/子子": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764160068389
+      "modified": 1764586121180
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/数据脱敏与水印溯源平台": {
+    "/Users/kuangxb/Desktop/首页自动化展示/子目录/子子": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764160068539
+      "modified": 1764586313414
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/数据安全综合服务平台": {
+    "/Users/kuangxb/Desktop/首页自动化展示/设施": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764152693234
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/数据安全业务线/子目录": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764152697271
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/基础设施业务线": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764164089631
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/密码服务业务线": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764164089936
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/test": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764143343522
+      "modified": 1764586529076
     },
     "/Users/kuangxb/Desktop/首页自动化展示/sv": {
       "hasIndex": true,
       "indexFile": "index.html",
-      "modified": 1764164090153
+      "modified": 1764592266347
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/基础设施业务线/sv": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764155877374
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/test/sv": {
+    "/Users/kuangxb/Desktop/首页自动化展示/2": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764164748301
+      "modified": 1764586714047
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/中文/sv": {
+    "/Users/kuangxb/Desktop/首页自动化展示/awesome-project1": {
       "hasIndex": true,
       "indexFile": "dist/index.html",
-      "modified": 1764164748331
+      "modified": 1764590673827
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/yinw/sv": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764138542993
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/test2/sv": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764158505260
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/test2": {
+    "/Users/kuangxb/Desktop/首页自动化展示/中文/22": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764154289499
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/中文": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764164089610
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/yingwen/sv": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764158332581
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/test3/sv": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764164748328
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/ts222/sv": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764164748326
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/3中文333/sv": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764164748322
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/aaa/sv": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764162104418
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/test/sv/src": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764164748316
-    },
-    "/Users/kuangxb/Desktop/首页自动化展示/test/sv/src/router": {
-      "hasIndex": false,
-      "indexFile": null,
-      "modified": 1764164748319
+      "modified": 1764593141035
     }
   },
   "lastScan": null

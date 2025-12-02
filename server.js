@@ -43,16 +43,6 @@ function isCacheValid(dirPath) {
 // 启用CORS
 app.use(cors());
 
-// 全局请求日志（观察每个请求路径，方便排查中文路径问题）
-app.use((req, res, next) => {
-  try {
-    console.log('[req]', req.path);
-  } catch (e) {
-    // 忽略日志异常
-  }
-  next();
-});
-
 // 解析 JSON 请求体（必须在路由之前）
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -198,20 +188,17 @@ app.use((req, res, next) => {
   
   let filePath = null;
   let isDistRequest = false;
-  // 统一对 URL 做一次解码，兼容中文目录
-  const rawPath = req.path || '/';
-  const decodedPath = decodeURIComponent(rawPath);
   
   // 检测是否是 dist/index.html 请求
-  if (decodedPath.endsWith('/dist/index.html') || (decodedPath.endsWith('/dist/') && req.query._format !== 'raw')) {
+  if (req.path.endsWith('/dist/index.html') || (req.path.endsWith('/dist/') && req.query._format !== 'raw')) {
     // 处理 /dist/ 结尾的路径，转换为 /dist/index.html
-    const actualPath = decodedPath.endsWith('/dist/') ? decodedPath + 'index.html' : decodedPath;
+    const actualPath = req.path.endsWith('/dist/') ? req.path + 'index.html' : req.path;
     filePath = path.join(__dirname, actualPath.substring(1));
     isDistRequest = true;
     // 提取项目相对路径（用于路径修复）
-    if (decodedPath.includes('/dist/')) {
-      const distIndex = decodedPath.indexOf('/dist/');
-      req._projectRelativePath = decodedPath.substring(0, distIndex);
+    if (req.path.includes('/dist/')) {
+      const distIndex = req.path.indexOf('/dist/');
+      req._projectRelativePath = req.path.substring(0, distIndex);
     }
   } 
   // 检测是否是项目根目录请求（会服务 dist/index.html）
@@ -222,7 +209,7 @@ app.use((req, res, next) => {
     isDistRequest = true;
   } else {
     // 尝试匹配所有可能的路径组合，从最长到最短（支持嵌套目录）
-    const pathParts = decodedPath.split('/').filter(p => p);
+    const pathParts = req.path.split('/').filter(p => p);
     
     for (let i = pathParts.length; i > 0; i--) {
       const testPath = '/' + pathParts.slice(0, i).join('/');
@@ -1231,7 +1218,9 @@ function hasIndexFile(dir) {
     if (!prototypeCache.prototypes) {
       prototypeCache.prototypes = {};
     }
+    const prev = prototypeCache.prototypes[normalizedPath] || {};
     prototypeCache.prototypes[normalizedPath] = {
+      ...prev,
       hasIndex: result !== false,
       indexFile: result || null,
       modified: Date.now()
@@ -1763,9 +1752,68 @@ app.post('/api/folders/delete', (req, res) => {
     }
     
     // 删除目录（递归删除）
-    fs.rmSync(resolvedPath, { recursive: true, force: true });
+    try {
+      fs.rmSync(resolvedPath, { recursive: true, force: true });
+      console.log(`[delete] 删除目录: ${resolvedPath}`);
+    } catch (rmError) {
+      console.warn('删除目录错误（rmSync失败，尝试备用方案）:', rmError);
+      // 某些环境下 rmSync 可能仍然抛出 ENOTEMPTY，这里使用系统 rm -rf 作为兜底
+      try {
+        const safePath = resolvedPath.replace(/"/g, '\\"');
+        execSync(`rm -rf "${safePath}"`, {
+          stdio: 'pipe',
+          encoding: 'utf8',
+          timeout: 60000
+        });
+        console.log(`[delete] 使用 rm -rf 成功删除目录: ${resolvedPath}`);
+      } catch (shellError) {
+        console.error('删除目录错误（rm -rf 也失败）:', shellError);
+        const friendlyMsg = rmError.code === 'ENOTEMPTY'
+          ? '目录删除失败：目录中可能存在被占用的文件，请关闭相关程序后重试，或手动删除该目录。'
+          : `目录删除失败：${rmError.message || shellError.message}`;
+        return res.status(500).json({ success: false, error: friendlyMsg });
+      }
+    }
     
-    console.log(`[delete] 删除目录: ${resolvedPath}`);
+    // 同步清理原型缓存记录（包括 gitConfig），保持磁盘与缓存状态一致
+    try {
+      const prototypeCache = loadPrototypeCache();
+      if (prototypeCache && prototypeCache.prototypes) {
+        const allKeys = Object.keys(prototypeCache.prototypes);
+        const normalizedBase = path.resolve(resolvedPath);
+        
+        allKeys.forEach(key => {
+          const normalizedKey = path.resolve(key);
+          if (
+            normalizedKey === normalizedBase ||
+            normalizedKey.startsWith(normalizedBase + path.sep)
+          ) {
+            delete prototypeCache.prototypes[key];
+          }
+        });
+        
+        savePrototypeCache(prototypeCache);
+        console.log(`[delete] 已从原型缓存中清理目录及子目录记录: ${resolvedPath}`);
+      }
+      
+      // 清理内存缓存（首页检测缓存）
+      const normalizedPathUnix = resolvedPath.replace(/\\/g, '/');
+      cache.indexFiles.forEach((_, key) => {
+        const k = key.replace(/\\/g, '/');
+        if (k === normalizedPathUnix || k.startsWith(normalizedPathUnix + '/')) {
+          cache.indexFiles.delete(key);
+          cache.lastUpdate.delete(key);
+        }
+      });
+      cache.subDirectories.forEach((_, key) => {
+        const k = key.replace(/\\/g, '/');
+        if (k === normalizedPathUnix || k.startsWith(normalizedPathUnix + '/')) {
+          cache.subDirectories.delete(key);
+        }
+      });
+    } catch (cacheErr) {
+      console.warn('[delete] 清理原型缓存记录失败（忽略继续）:', cacheErr.message || cacheErr.toString());
+    }
     
     // 记录版本变更（包含目录快照）
     const version = {
@@ -2819,7 +2867,7 @@ function restoreDirectory(snapshot) {
 }
 
 // Git同步接口
-app.post('/api/git/sync', (req, res) => {
+app.post('/api/git/sync', async (req, res) => {
   try {
     const { repoUrl, branch = 'main', username = '', password = '', targetPath = '' } = req.body;
     
@@ -2945,11 +2993,27 @@ app.post('/api/git/sync', (req, res) => {
               }
             }
             
+            // 在拉取前强制清理本地修改和未跟踪文件
+            // 由于服务端不需要保留本地改动（所有自动修改都可以在同步后重新生成），
+            // 这里直接使用 reset --hard 和 clean -fd，避免 "local changes would be overwritten" 等错误
+            try {
+              console.log(`[Git同步] 清理本地修改和未跟踪文件: ${cloneDir}`);
+              execSync(`cd "${cloneDir}" && git reset --hard HEAD && git clean -fd`, {
+                stdio: 'pipe',
+                encoding: 'utf8',
+                timeout: 60000
+              });
+            } catch (cleanError) {
+              console.warn('[Git同步] 清理本地修改时出现警告（忽略继续）:', cleanError.message || cleanError.toString());
+            }
+            
             // 切换到目标分支并拉取
+            // 注意：某些仓库输出较多日志，默认缓冲区可能导致 ENOBUFS，这里放大 maxBuffer
             execSync(`cd "${cloneDir}" && git fetch origin && git checkout ${branch} && git pull origin ${branch}`, {
               stdio: 'pipe',
               encoding: 'utf8',
-              timeout: 60000 // 60秒超时
+              timeout: 60000, // 60秒超时
+              maxBuffer: 10 * 1024 * 1024 // 10MB 缓冲区，避免 spawnSync ENOBUFS
             });
             console.log(`[Git同步] ✓ 拉取更新成功`);
             
@@ -2966,15 +3030,54 @@ app.post('/api/git/sync', (req, res) => {
             const indexFile = hasIndexFile(cloneDir);
             console.log(`[git/sync] 自动识别原型: ${cloneDir}, hasIndex: ${indexFile !== false}`);
             
-            // 返回成功响应，但不立即处理项目（由前端调用自动处理API）
+            // Git 同步完成后，自动调用项目自动处理（安装依赖 + 配置路由 + 构建）
+            let autoProcessResult = null;
+            try {
+              console.log(`[Git同步] 开始自动处理项目: ${cloneDir}`);
+              const autoResp = await fetch(`http://localhost:${PORT}/api/project/auto-process`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ projectPath: cloneDir })
+              });
+              autoProcessResult = await autoResp.json();
+              console.log(`[Git同步] 自动处理结果:`, autoProcessResult.success, autoProcessResult.message || autoProcessResult.error || '');
+              
+              // 记录 Git 同步配置信息到原型缓存，便于后续重新同步时预填
+              try {
+                const prototypeCache = loadPrototypeCache();
+                const key = path.resolve(cloneDir);
+                if (!prototypeCache.prototypes) {
+                  prototypeCache.prototypes = {};
+                }
+                if (!prototypeCache.prototypes[key]) {
+                  prototypeCache.prototypes[key] = {};
+                }
+                prototypeCache.prototypes[key].gitConfig = {
+                  repoUrl,
+                  branch,
+                  username,
+                  // 记录为前端传入的相对路径（与“同步到目录”下拉框一致），根目录为空字符串
+                  targetPath: targetPath || ''
+                };
+                savePrototypeCache(prototypeCache);
+                console.log(`[Git同步] 已记录 Git 配置信息到原型缓存: ${key}`);
+              } catch (gitCfgErr) {
+                console.warn('[Git同步] 记录 Git 配置信息失败:', gitCfgErr.message || gitCfgErr.toString());
+              }
+            } catch (autoErr) {
+              console.error('[Git同步] 自动处理项目失败:', autoErr.message || autoErr);
+            }
+            
+            // 返回成功响应（包含自动处理结果）
             return res.json({ 
               success: true, 
-              message: `仓库已更新到最新版本（分支: ${branch}）`,
+              message: `仓库已更新到最新版本并完成自动处理（分支: ${branch}）`,
               targetPath: cloneDir,
               path: cloneDir,
               autoProcess: true, // 标记需要自动处理
               hasIndex: indexFile !== false,
-              indexFile: indexFile || null
+              indexFile: indexFile || null,
+              autoProcessResult: autoProcessResult
             });
           } else {
             // 目录存在但不是git仓库，返回错误
@@ -3076,15 +3179,54 @@ app.post('/api/git/sync', (req, res) => {
           const indexFile = hasIndexFile(cloneDir);
           console.log(`[git/sync] 自动识别原型: ${cloneDir}, hasIndex: ${indexFile !== false}`);
           
-          // 返回成功响应，但不立即处理项目（由前端调用自动处理API）
+          // Git 克隆完成后，自动调用项目自动处理（安装依赖 + 配置路由 + 构建）
+          let autoProcessResult = null;
+          try {
+            console.log(`[Git同步] 开始自动处理项目: ${cloneDir}`);
+            const autoResp = await fetch(`http://localhost:${PORT}/api/project/auto-process`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ projectPath: cloneDir })
+            });
+            autoProcessResult = await autoResp.json();
+            console.log(`[Git同步] 自动处理结果:`, autoProcessResult.success, autoProcessResult.message || autoProcessResult.error || '');
+            
+            // 记录 Git 同步配置信息到原型缓存，便于后续重新同步时预填
+            try {
+              const prototypeCache = loadPrototypeCache();
+              const key = path.resolve(cloneDir);
+              if (!prototypeCache.prototypes) {
+                prototypeCache.prototypes = {};
+              }
+              if (!prototypeCache.prototypes[key]) {
+                prototypeCache.prototypes[key] = {};
+              }
+              prototypeCache.prototypes[key].gitConfig = {
+                repoUrl,
+                branch,
+                username,
+                // 记录为前端传入的相对路径（与“同步到目录”下拉框一致），根目录为空字符串
+                targetPath: targetPath || ''
+              };
+              savePrototypeCache(prototypeCache);
+              console.log(`[Git同步] 已记录 Git 配置信息到原型缓存: ${key}`);
+            } catch (gitCfgErr) {
+              console.warn('[Git同步] 记录 Git 配置信息失败:', gitCfgErr.message || gitCfgErr.toString());
+            }
+          } catch (autoErr) {
+            console.error('[Git同步] 自动处理项目失败:', autoErr.message || autoErr);
+          }
+          
+          // 返回成功响应（包含自动处理结果）
           return res.json({ 
             success: true, 
-            message: `仓库已成功克隆（分支: ${branch}）`,
+            message: `仓库已成功克隆并完成自动处理（分支: ${branch}）`,
             targetPath: cloneDir,
             path: cloneDir,
             autoProcess: true, // 标记需要自动处理
             hasIndex: indexFile !== false,
-            indexFile: indexFile || null
+            indexFile: indexFile || null,
+            autoProcessResult: autoProcessResult
           });
         } catch (cloneError) {
           console.error(`[Git同步] ✗ 克隆失败:`, cloneError.message);
@@ -4231,6 +4373,112 @@ async function buildProject(projectPath, projectType) {
       if (errorOutput) console.error(`[项目构建] stdout: ${errorOutput}`);
       if (errorStderr) console.error(`[项目构建] stderr: ${errorStderr}`);
       
+      // 先处理常见的「Permission denied」情况（例如 vite 没有执行权限）
+      const isPermissionDenied = fullError.includes('Permission denied') && buildToolExists;
+      if (isPermissionDenied) {
+        try {
+          console.warn(`[项目构建] 检测到权限问题，尝试为构建工具添加执行权限: ${buildToolBinPath}`);
+          // 为构建工具添加可执行权限（755）
+          fs.chmodSync(buildToolBinPath, 0o755);
+          console.log(`[项目构建] 已为构建工具添加执行权限，重新尝试 npm run build...`);
+          
+          execSync('npm run build', {
+            cwd: projectPath,
+            stdio: 'pipe',
+            encoding: 'utf8',
+            timeout: 600000, // 10分钟超时
+            env: env,
+            shell: true
+          });
+          
+          console.log(`[项目构建] ✓ 修复权限后构建成功`);
+          const buildOutputDir = detectBuildOutput(projectPath, projectType.buildOutputDirs);
+          return {
+            success: true,
+            message: '构建成功（已自动修复构建工具执行权限）',
+            buildOutputDir: buildOutputDir || null
+          };
+        } catch (permError) {
+          const permMsg = permError.message || permError.toString();
+          const permStdout = permError.stdout ? permError.stdout.toString() : '';
+          const permStderr = permError.stderr ? permError.stderr.toString() : '';
+          const permFullError = permMsg + (permStdout ? '\n' + permStdout : '') + (permStderr ? '\n' + permStderr : '');
+          console.error(`[项目构建] ✗ 修复权限后构建仍然失败:`, permFullError);
+          
+          // 如果修复权限后变成 rollup 的已知问题，这里直接按 rollup 逻辑处理一次
+          const isRollupAfterPerm = permFullError.includes('@rollup/rollup') || 
+                                    permFullError.includes('Cannot find module @rollup') ||
+                                    permFullError.includes('rollup-darwin-arm64') ||
+                                    permFullError.includes('rollup-darwin-x64') ||
+                                    permFullError.includes('rollup-linux') ||
+                                    permFullError.includes('rollup-win32') ||
+                                    (permFullError.includes('MODULE_NOT_FOUND') && permFullError.includes('rollup'));
+          if (isRollupAfterPerm) {
+            console.log(`[项目构建] 检测到 rollup 相关错误（权限修复后），尝试清理依赖并重新安装...`);
+            
+            const nodeModulesPathForRollup = path.join(projectPath, 'node_modules');
+            const packageLockPathForRollup = path.join(projectPath, 'package-lock.json');
+            
+            try {
+              if (fs.existsSync(nodeModulesPathForRollup)) {
+                fs.rmSync(nodeModulesPathForRollup, { recursive: true, force: true });
+                console.log(`[项目构建] 已删除 node_modules 目录`);
+              }
+              if (fs.existsSync(packageLockPathForRollup)) {
+                fs.unlinkSync(packageLockPathForRollup);
+                console.log(`[项目构建] 已删除 package-lock.json`);
+              }
+            } catch (cleanupError) {
+              console.warn(`[项目构建] 清理失败: ${cleanupError.message}`);
+            }
+            
+            console.log(`[项目构建] 重新执行 npm install（处理 rollup 问题）...`);
+            try {
+              execSync('npm install', {
+                cwd: projectPath,
+                stdio: 'pipe',
+                encoding: 'utf8',
+                timeout: 300000
+              });
+              
+              if (!fs.existsSync(nodeModulesPathForRollup)) {
+                return { 
+                  success: false, 
+                  error: '构建失败：清理后重新安装依赖仍然失败，node_modules目录未创建。\n\n建议：\n1. 手动进入项目目录执行: cd "' + projectPath + '" && rm -rf node_modules package-lock.json && npm install\n2. 检查服务器环境：访问 /api/system/check' 
+                };
+              }
+              
+              console.log(`[项目构建] ✓ 依赖重新安装成功（处理 rollup 问题），重新尝试构建...`);
+              execSync('npm run build', {
+                cwd: projectPath,
+                stdio: 'pipe',
+                encoding: 'utf8',
+                timeout: 600000,
+                env: env,
+                shell: true
+              });
+              
+              console.log(`[项目构建] ✓ 清理 rollup 问题后重新构建成功`);
+              const buildOutputDir = detectBuildOutput(projectPath, projectType.buildOutputDirs);
+              return { 
+                success: true, 
+                message: '构建成功（已自动处理 rollup 依赖问题）',
+                buildOutputDir: buildOutputDir || null
+              };
+            } catch (rollupFixError) {
+              const retryMsg = rollupFixError.message || rollupFixError.toString();
+              const retryStderr = rollupFixError.stderr ? rollupFixError.stderr.toString() : '';
+              console.error(`[项目构建] ✗ 处理 rollup 依赖问题后构建仍然失败:`, retryMsg + (retryStderr ? '\n' + retryStderr : ''));
+              return { 
+                success: false, 
+                error: `构建失败（已尝试自动处理 rollup 依赖问题）: ${retryMsg}` 
+              };
+            }
+          }
+          // 否则继续走后面的通用错误处理（包括 rollup 处理等）
+        }
+      }
+      
       // 检查是否是 @rollup/rollup 相关错误（npm 的已知 bug）
       const isRollupError = fullError.includes('@rollup/rollup') || 
                            fullError.includes('Cannot find module @rollup') ||
@@ -4659,6 +4907,61 @@ app.post('/api/prototypes/download', async (req, res) => {
   }
 });
 
+// 获取原型的 Git 同步配置信息（用于重新同步时预填表单）
+app.post('/api/prototypes/git-config', (req, res) => {
+  try {
+    const { path: prototypePath } = req.body;
+    
+    if (!prototypePath) {
+      return res.status(400).json({ success: false, error: '缺少项目路径参数' });
+    }
+    
+    // 解析路径（支持绝对路径和相对路径）
+    let fullPath;
+    if (path.isAbsolute(prototypePath)) {
+      fullPath = prototypePath;
+    } else {
+      fullPath = path.resolve(__dirname, prototypePath);
+    }
+    
+    // 安全检查
+    if (!fullPath.startsWith(path.resolve(__dirname))) {
+      return res.status(403).json({ success: false, error: '访问被拒绝：路径不在允许范围内' });
+    }
+    
+    const cache = loadPrototypeCache();
+    const key = path.resolve(fullPath);
+    
+    // 先尝试在当前目录上查找 gitConfig
+    let gitConfig = null;
+    if (cache.prototypes && cache.prototypes[key] && cache.prototypes[key].gitConfig) {
+      gitConfig = cache.prototypes[key].gitConfig;
+    } else {
+      // 如果当前目录没有 gitConfig（例如原型在仓库子目录，gitConfig 记录在仓库根目录），
+      // 向上查找最近一个包含 gitConfig 的父目录
+      let dir = path.dirname(key);
+      const rootDir = path.resolve(__dirname);
+      while (dir && dir.startsWith(rootDir) && dir.length >= rootDir.length) {
+        if (cache.prototypes && cache.prototypes[dir] && cache.prototypes[dir].gitConfig) {
+          gitConfig = cache.prototypes[dir].gitConfig;
+          break;
+        }
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+      }
+    }
+    
+    return res.json({
+      success: true,
+      gitConfig
+    });
+  } catch (error) {
+    console.error('[原型Git配置] 读取失败:', error);
+    return res.status(500).json({ success: false, error: error.message || '未知错误' });
+  }
+});
+
 // 下载原型文件（打包为 ZIP）- 必须在 express.static 之前定义
 app.post('/api/prototypes/download', async (req, res) => {
   try {
@@ -4856,8 +5159,30 @@ app.post('/api/project/auto-process', async (req, res) => {
     console.log(`[自动处理] 开始处理项目: ${fullPath}`);
     
     // 1. 检测项目类型
-    const detection = detectProjectType(fullPath);
+    let detection = detectProjectType(fullPath);
     console.log(`[自动处理] 检测到项目类型: ${detection.type}`);
+    
+    // 如果当前目录类型 unknown，但其一级子目录中存在带 package.json 的前端项目，
+    // 自动下探一层到该子目录（例如 new-project/gateway-admin）
+    if (detection.type === 'unknown' && fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()) {
+      try {
+        const entries = fs.readdirSync(fullPath, { withFileTypes: true });
+        const candidateDirs = entries
+          .filter(e => e.isDirectory())
+          .map(e => path.join(fullPath, e.name))
+          .filter(dirPath => fs.existsSync(path.join(dirPath, 'package.json')));
+        
+        if (candidateDirs.length === 1) {
+          const nestedPath = candidateDirs[0];
+          console.log(`[自动处理] 当前目录类型 unknown，检测到唯一子项目目录: ${nestedPath}，改为处理该目录`);
+          fullPath = nestedPath;
+          detection = detectProjectType(fullPath);
+          console.log(`[自动处理] 子项目检测到类型: ${detection.type}`);
+        }
+      } catch (scanErr) {
+        console.warn('[自动处理] 扫描子目录以寻找项目失败:', scanErr.message);
+      }
+    }
     
     const results = {
       detection: { success: true, type: detection.type },

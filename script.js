@@ -5,6 +5,155 @@ let breadcrumbPath = [];
 let allPrototypesCache = []; // 缓存所有原型，用于搜索
 let allDirectoriesCache = []; // 缓存所有目录（包括所有层级），用于搜索
 
+// 全局轻量提示（非阻塞）
+function showOperationTip(message, type = 'info') {
+    let tip = document.getElementById('operationTip');
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'operationTip';
+        tip.style.position = 'fixed';
+        // 居中靠上，避免被浏览器地址栏或系统托盘遮挡
+        tip.style.top = '20px';
+        tip.style.left = '50%';
+        tip.style.transform = 'translateX(-50%)';
+        tip.style.zIndex = '9999';
+        tip.style.padding = '10px 16px';
+        tip.style.borderRadius = '4px';
+        tip.style.fontSize = '13px';
+        tip.style.color = '#fff';
+        tip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        tip.style.backgroundColor = '#2196f3';
+        tip.style.maxWidth = '360px';
+        tip.style.wordBreak = 'break-all';
+        document.body.appendChild(tip);
+    }
+    if (type === 'success') {
+        tip.style.backgroundColor = '#4caf50';
+    } else if (type === 'error') {
+        tip.style.backgroundColor = '#f44336';
+    } else {
+        tip.style.backgroundColor = '#2196f3';
+    }
+    tip.textContent = message;
+    tip.style.display = 'block';
+    // 默认3秒后自动隐藏（如果后续有新提示会重置）
+    if (tip._hideTimer) {
+        clearTimeout(tip._hideTimer);
+    }
+    tip._hideTimer = setTimeout(() => {
+        tip.style.display = 'none';
+    }, 3000);
+}
+
+function hideOperationTip() {
+    const tip = document.getElementById('operationTip');
+    if (tip) {
+        tip.style.display = 'none';
+        if (tip._hideTimer) {
+            clearTimeout(tip._hideTimer);
+        }
+    }
+}
+
+// 通用确认弹窗（页面内弹窗，而不是浏览器alert/confirm）
+function showConfirmModal(options) {
+    const {
+        title = '提示',
+        message = '',
+        confirmText = '确定',
+        cancelText = '取消',
+        onConfirm
+    } = options || {};
+    
+    let overlay = document.getElementById('confirmModalOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'confirmModalOverlay';
+        overlay.style.position = 'fixed';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.right = '0';
+        overlay.style.bottom = '0';
+        overlay.style.background = 'rgba(0,0,0,0.35)';
+        overlay.style.display = 'none';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '9998';
+        
+        const dialog = document.createElement('div');
+        dialog.id = 'confirmModal';
+        dialog.style.background = '#fff';
+        dialog.style.borderRadius = '8px';
+        dialog.style.padding = '20px 24px';
+        dialog.style.minWidth = '320px';
+        dialog.style.maxWidth = '420px';
+        dialog.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        
+        dialog.innerHTML = `
+            <h3 id="confirmModalTitle" style="margin:0 0 12px;font-size:16px;">提示</h3>
+            <div id="confirmModalMessage" style="font-size:13px;color:#333;line-height:1.6;"></div>
+            <div id="confirmModalStatus" style="margin-top:8px;font-size:12px;color:#999;min-height:16px;"></div>
+            <div style="margin-top:16px;text-align:right;">
+                <button id="confirmModalCancelBtn" style="margin-right:8px;padding:6px 14px;font-size:13px;border-radius:4px;border:1px solid #ccc;background:#fff;cursor:pointer;">取消</button>
+                <button id="confirmModalOkBtn" style="padding:6px 16px;font-size:13px;border-radius:4px;border:1px solid #1976d2;background:#1976d2;color:#fff;cursor:pointer;">确定</button>
+            </div>
+        `;
+        
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+    }
+    
+    const titleEl = document.getElementById('confirmModalTitle');
+    const msgEl = document.getElementById('confirmModalMessage');
+    const statusEl = document.getElementById('confirmModalStatus');
+    const cancelBtn = document.getElementById('confirmModalCancelBtn');
+    const okBtn = document.getElementById('confirmModalOkBtn');
+    
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+    statusEl.textContent = '';
+    cancelBtn.disabled = false;
+    okBtn.disabled = false;
+    okBtn.textContent = confirmText || '确定';
+    cancelBtn.textContent = cancelText || '取消';
+    
+    const close = () => {
+        overlay.style.display = 'none';
+    };
+    
+    cancelBtn.onclick = () => {
+        if (cancelBtn.disabled) return;
+        close();
+    };
+    
+    okBtn.onclick = async () => {
+        if (okBtn.disabled) return;
+        if (typeof onConfirm !== 'function') {
+            close();
+            return;
+        }
+        okBtn.disabled = true;
+        cancelBtn.disabled = true;
+        const originalText = okBtn.textContent;
+        okBtn.textContent = '处理中...';
+        statusEl.textContent = '正在处理，请稍候...';
+        try {
+            await onConfirm({
+                setStatus: (text) => { statusEl.textContent = text || ''; },
+                close
+            });
+            close();
+        } catch (e) {
+            statusEl.textContent = '操作失败：' + (e.message || e);
+            okBtn.disabled = false;
+            cancelBtn.disabled = false;
+            okBtn.textContent = originalText;
+        }
+    };
+    
+    overlay.style.display = 'flex';
+}
+
 // 格式化日期
 function formatDate(dateString) {
     if (!dateString) return '未知';
@@ -1306,6 +1455,8 @@ function showCreateFolderDialog(parentPath, type) {
     const nameInput = document.getElementById('folderNameInput');
     const operationInput = document.getElementById('folderOperation');
     const targetPathInput = document.getElementById('folderTargetPath');
+    const statusText = document.getElementById('folderStatus');
+    const submitBtn = document.getElementById('folderSubmitBtn');
     
     modalTitle.textContent = type === 'child' ? '新增子目录' : '新增同级目录';
     nameLabel.textContent = '目录名称：';
@@ -1315,6 +1466,15 @@ function showCreateFolderDialog(parentPath, type) {
     
     // 存储操作类型（用于提交时区分）
     modal.dataset.operationType = type;
+    
+    // 重置状态提示和按钮（避免上一次操作的“创建成功”等残留）
+    if (statusText) {
+        statusText.textContent = '';
+    }
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '确定';
+    }
     
     modal.style.display = 'flex';
     nameInput.focus();
@@ -1328,12 +1488,23 @@ function showRenameFolderDialog(folder) {
     const nameInput = document.getElementById('folderNameInput');
     const operationInput = document.getElementById('folderOperation');
     const targetPathInput = document.getElementById('folderTargetPath');
+    const statusText = document.getElementById('folderStatus');
+    const submitBtn = document.getElementById('folderSubmitBtn');
     
     modalTitle.textContent = '编辑目录名称';
     nameLabel.textContent = '新名称：';
     nameInput.value = folder.displayName || folder.name;
     operationInput.value = 'rename';
     targetPathInput.value = folder.path;
+    
+    // 重置状态提示和按钮
+    if (statusText) {
+        statusText.textContent = '';
+    }
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '确定';
+    }
     
     modal.style.display = 'flex';
     nameInput.focus();
@@ -1343,9 +1514,16 @@ function showRenameFolderDialog(folder) {
 // 显示删除目录确认对话框
 function showDeleteFolderDialog(folder) {
     const folderName = folder.displayName || folder.name;
-    if (confirm(`确定要删除目录 "${folderName}" 吗？\n\n此操作将删除目录及其所有内容，且无法恢复！`)) {
-        deleteFolder(folder.path);
-    }
+    showConfirmModal({
+        title: '删除目录',
+        message: `确定要删除目录「${folderName}」吗？\n此操作将删除目录及其所有内容，且无法恢复！`,
+        confirmText: '删除',
+        cancelText: '取消',
+        onConfirm: async ({ setStatus }) => {
+            setStatus('正在删除目录，请稍候...');
+            await deleteFolder(folder.path);
+        }
+    });
 }
 
 // 关闭目录操作对话框
@@ -1371,16 +1549,15 @@ async function createFolder(parentPath, folderName, type) {
         const data = await response.json();
         
         if (data.success) {
-            alert('目录创建成功！');
             closeFolderDialog();
-            // 重新加载树
-            await loadTree();
+            // 触发一次异步刷新树（不阻塞当前弹窗关闭和提示）
+            loadTree(true);
         } else {
-            alert('创建失败：' + (data.error || '未知错误'));
+            showOperationTip('创建目录失败：' + (data.error || '未知错误'), 'error');
         }
     } catch (err) {
         console.error('创建目录失败:', err);
-        alert('创建目录失败，请重试');
+        showOperationTip(`创建目录「${folderName}」失败，请重试：${err.message}`, 'error');
     }
 }
 
@@ -1399,10 +1576,9 @@ async function renameFolder(folderPath, newName) {
         const data = await response.json();
         
         if (data.success) {
-            alert('目录重命名成功！');
             closeFolderDialog();
-            // 重新加载树
-            await loadTree();
+            // 异步刷新树，不阻塞当前交互
+            loadTree(true);
             // 如果当前选中的是这个目录，需要更新显示
             if (currentPath === folderPath) {
                 const folder = {
@@ -1417,11 +1593,11 @@ async function renameFolder(folderPath, newName) {
                 await showFolderDetail(folder);
             }
         } else {
-            alert('重命名失败：' + (data.error || '未知错误'));
+            showOperationTip('目录重命名失败：' + (data.error || '未知错误'), 'error');
         }
     } catch (err) {
         console.error('重命名目录失败:', err);
-        alert('重命名目录失败，请重试');
+        showOperationTip(`目录重命名失败，请重试：${err.message}`, 'error');
     }
 }
 
@@ -1439,71 +1615,75 @@ async function deleteFolder(folderPath) {
         const data = await response.json();
         
         if (data.success) {
-            alert('目录删除成功！');
-            // 重新加载树
-            await loadTree();
+            // 异步刷新树，不阻塞当前交互
+            loadTree(true);
             // 如果删除的是当前选中的目录，显示首页
             if (currentPath === folderPath) {
                 await showRootContent();
             }
         } else {
-            alert('删除失败：' + (data.error || '未知错误'));
+            showOperationTip('删除目录失败：' + (data.error || '未知错误'), 'error');
         }
     } catch (err) {
         console.error('删除目录失败:', err);
-        alert('删除目录失败，请重试');
+        showOperationTip(`删除目录失败，请重试：${err.message}`, 'error');
     }
 }
 
 // 删除原型
 async function deletePrototype(prototypePath, prototypeName) {
-    const confirmMsg = `确定要删除原型 "${prototypeName}" 吗？\n\n此操作将删除整个原型目录及其所有内容，且无法恢复！\n\n删除后可以通过版本历史恢复。`;
-    
-    if (!confirm(confirmMsg)) {
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/folders/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                folderPath: prototypePath
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            alert('原型删除成功！');
-            // 重新加载树和内容
-            await loadTree();
-            // 如果删除的是当前显示的原型，显示首页
-            if (currentPath === prototypePath || currentPath === null) {
-                await showRootContent();
-            } else {
-                // 重新显示当前目录
-                const activeNode = document.querySelector('.tree-node-item.active');
-                if (activeNode && activeNode.dataset.path !== 'home') {
-                    const folder = {
-                        name: activeNode.querySelector('.tree-node-name').textContent,
-                        displayName: activeNode.querySelector('.tree-node-name').textContent,
-                        path: activeNode.dataset.path,
-                        hasIndex: false,
-                        indexFile: null
-                    };
-                    await showFolderDetail(folder);
+    showConfirmModal({
+        title: '删除原型',
+        message: `确定要删除原型「${prototypeName}」吗？\n此操作将删除整个原型目录及其所有内容，且无法恢复！\n\n删除后可以通过版本历史恢复。`,
+        confirmText: '删除',
+        cancelText: '取消',
+        onConfirm: async ({ setStatus }) => {
+            try {
+                setStatus('正在删除原型，请稍候...');
+                const response = await fetch('/api/folders/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        folderPath: prototypePath
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    setStatus('删除成功，正在刷新页面数据...');
+                    // 异步刷新树和内容（不阻塞弹窗关闭）
+                    loadTree(true);
+                    // 如果删除的是当前显示的原型，显示首页
+                    if (currentPath === prototypePath || currentPath === null) {
+                        await showRootContent();
+                    } else {
+                        // 重新显示当前目录
+                        const activeNode = document.querySelector('.tree-node-item.active');
+                        if (activeNode && activeNode.dataset.path !== 'home') {
+                            const folder = {
+                                name: activeNode.querySelector('.tree-node-name').textContent,
+                                displayName: activeNode.querySelector('.tree-node-name').textContent,
+                                path: activeNode.dataset.path,
+                                hasIndex: false,
+                                indexFile: null
+                            };
+                            await showFolderDetail(folder);
+                        } else {
+                            await showRootContent();
+                        }
+                    }
                 } else {
-                    await showRootContent();
+                    setStatus('删除失败：' + (data.error || '未知错误'));
+                    throw new Error(data.error || '删除失败');
                 }
+            } catch (err) {
+                console.error('删除原型失败:', err);
+                setStatus('删除失败：' + (err.message || err));
+                throw err;
             }
-        } else {
-            alert('删除失败：' + (data.error || '未知错误'));
         }
-    } catch (err) {
-        console.error('删除原型失败:', err);
-        alert('删除原型失败，请重试');
-    }
+    });
 }
 
 // 切换更多操作菜单
@@ -1677,6 +1857,8 @@ async function downloadPrototype(prototypePath, prototypeName) {
 function setupFolderForm() {
     const folderForm = document.getElementById('folderForm');
     const folderModal = document.getElementById('folderModal');
+    const folderStatus = document.getElementById('folderStatus');
+    const submitBtn = document.getElementById('folderSubmitBtn');
     
     folderForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1687,14 +1869,35 @@ function setupFolderForm() {
         const operationType = folderModal.dataset.operationType;
         
         if (!folderName) {
-            alert('请输入目录名称');
+            if (folderStatus) folderStatus.textContent = '请输入目录名称';
             return;
         }
         
-        if (operation === 'create') {
-            await createFolder(targetPath, folderName, operationType);
-        } else if (operation === 'rename') {
-            await renameFolder(targetPath, folderName);
+        if (folderStatus) folderStatus.textContent = '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            const originalText = submitBtn.textContent;
+            submitBtn.dataset.originalText = originalText;
+            submitBtn.textContent = operation === 'create' ? '正在创建...' : '正在保存...';
+        }
+        
+        try {
+            if (operation === 'create') {
+                if (folderStatus) folderStatus.textContent = '正在创建目录，请稍候...';
+                await createFolder(targetPath, folderName, operationType);
+                if (folderStatus) folderStatus.textContent = '创建成功';
+            } else if (operation === 'rename') {
+                if (folderStatus) folderStatus.textContent = '正在重命名目录，请稍候...';
+                await renameFolder(targetPath, folderName);
+                if (folderStatus) folderStatus.textContent = '保存成功';
+            }
+        } catch (err) {
+            if (folderStatus) folderStatus.textContent = '操作失败：' + (err.message || err);
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = submitBtn.dataset.originalText || '确定';
+            }
         }
     });
 }
@@ -2232,7 +2435,8 @@ function setupUploadForm() {
 }
 
 // 显示Git同步对话框
-async function showGitSyncDialog(targetPath = null) {
+// 如果 lockTarget 为 true，则下拉框锁定为指定目录，避免重新同步时误改目标目录
+async function showGitSyncDialog(targetPath = null, lockTarget = false) {
     const modal = document.getElementById('gitSyncModal');
     const targetPathSelect = document.getElementById('gitTargetPath');
     const statusDiv = document.getElementById('gitSyncStatus');
@@ -2252,16 +2456,53 @@ async function showGitSyncDialog(targetPath = null) {
         targetPathSelect.appendChild(option);
     });
     
-    // 设置默认选中的目录（优先使用传入的targetPath，否则使用currentPath）
-    if (targetPath) {
-        targetPathSelect.value = targetPath;
-    } else if (currentPath) {
-        targetPathSelect.value = currentPath;
-    } else {
-        targetPathSelect.value = '';
+    // 如果传入的 targetPath 不在列表中（例如原型在根目录或目录被隐藏），
+    // 则额外插入一条选项以保证能选中，同时显示一个相对友好的目录标签
+    if (targetPath && !directories.some(d => d.path === targetPath)) {
+        // 默认文案改为“根目录”，与新增时下拉框保持一致
+        let label = '根目录';
+        try {
+            // 尝试将绝对路径转换为相对于工作空间根目录的短路径，避免直接暴露完整物理路径
+            const normalized = targetPath.replace(/\\/g, '/');
+            const match = normalized.match(/首页自动化展示\/(.*)$/);
+            if (match) {
+                if (match[1]) {
+                    // 只显示工作空间之后的部分，例如 "awesome-project1" 或 "子目录/awesome-project1"
+                    label = match[1];
+                } else {
+                    // 匹配到了工作空间根本身，相当于“根目录”
+                    label = '根目录';
+                }
+            }
+        } catch (e) {
+            // 忽略转换错误，保持默认文案
+        }
+        const extraOption = document.createElement('option');
+        extraOption.value = targetPath;
+        extraOption.textContent = label;
+        targetPathSelect.appendChild(extraOption);
     }
     
-    // 清空表单
+    // 设置默认选中的目录
+    if (lockTarget) {
+        // 重新同步场景：优先使用记录的 targetPath（可能是空字符串，表示根目录），
+        // 不受 currentPath 影响，确保与新增时选择的目录一致
+        targetPathSelect.value = (typeof targetPath === 'string') ? targetPath : '';
+    } else {
+        // 新增场景：优先使用传入的 targetPath，否则退回到 currentPath 或根目录
+        if (targetPath) {
+            targetPathSelect.value = targetPath;
+        } else if (currentPath) {
+            targetPathSelect.value = currentPath;
+        } else {
+            targetPathSelect.value = '';
+        }
+    }
+    
+    // 如果是“重新同步”场景，锁定目录，避免误改导致路径异常
+    targetPathSelect.disabled = !!lockTarget;
+    
+    // 清空表单（重新同步场景下不清空目标目录，只清空其它字段）
     document.getElementById('gitRepoUrl').value = '';
     document.getElementById('gitBranch').value = '';
     document.getElementById('gitUsername').value = '';
@@ -2272,11 +2513,50 @@ async function showGitSyncDialog(targetPath = null) {
 
 // 显示重新同步Git对话框（从原型卡片更多操作中调用）
 async function showResyncGitDialog(prototypePath) {
-    // 打开Git同步对话框，并预填目标路径为原型所在目录的父目录
-    // 在浏览器环境中，路径分隔符可能是 / 或 \
+    // 先尝试从服务端获取该原型的 Git 配置信息
+    let gitConfig = null;
+    try {
+        const resp = await fetch('/api/prototypes/git-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: prototypePath })
+        });
+        const data = await resp.json();
+        if (data.success && data.gitConfig) {
+            gitConfig = data.gitConfig;
+        }
+    } catch (err) {
+        console.warn('获取原型 Git 配置信息失败:', err);
+    }
+    
+    // 计算原型所在目录的父目录（作为兜底）
     const pathParts = prototypePath.replace(/\\/g, '/').split('/');
     const parentPath = pathParts.slice(0, -1).join('/') || '';
-    await showGitSyncDialog(parentPath);
+    
+    // 优先使用首次添加时记录的 targetPath（即“同步到目录”时选择的目录），
+    // 注意：targetPath 可能是空字符串（表示根目录），不能简单用 ||
+    // 如果没有记录再退回到当前原型所在目录的父目录
+    let targetPathForSync = parentPath;
+    if (gitConfig && Object.prototype.hasOwnProperty.call(gitConfig, 'targetPath')) {
+        targetPathForSync = gitConfig.targetPath;
+    }
+    
+    // 重新同步时锁定目标目录，避免用户误改导致路径异常
+    await showGitSyncDialog(targetPathForSync, true);
+    
+    // 如果拿到了历史 Git 配置，则预填表单字段（仓库地址、分支、用户名）
+    if (gitConfig) {
+        if (gitConfig.repoUrl) {
+            document.getElementById('gitRepoUrl').value = gitConfig.repoUrl;
+        }
+        if (gitConfig.branch) {
+            document.getElementById('gitBranch').value = gitConfig.branch;
+        }
+        if (gitConfig.username) {
+            document.getElementById('gitUsername').value = gitConfig.username;
+        }
+        // 出于安全考虑，不预填密码/token
+    }
 }
 
 // 重新编译原型项目
@@ -2369,12 +2649,31 @@ async function rebuildPrototype(prototypePath, prototypeName) {
                 }
             }, 1500);
         } else {
-            statusDiv.textContent = `编译失败: ${data.error || '未知错误'}`;
+            const rawError = data.error || '未知错误';
+            
+            // 根据常见错误类型生成更友好的提示
+            let friendlyTips = '\n\n诊断建议：\n';
+            if (rawError.includes('node_modules/.bin/vite') && rawError.includes('Permission denied')) {
+                friendlyTips += '1. 构建工具 vite 没有执行权限，系统已尝试自动修复权限。\n';
+                friendlyTips += '2. 如多次自动修复仍失败，可手动进入项目目录执行：chmod +x node_modules/.bin/vite。\n';
+                friendlyTips += '3. 然后再次点击“重新编译”重试。\n';
+            } else if (rawError.includes('@rollup/rollup') || rawError.includes('rollup-darwin-arm64')) {
+                friendlyTips += '1. 这是 npm 关于 Rollup 可选依赖的已知问题（缺少 @rollup/rollup-* 模块）。\n';
+                friendlyTips += '2. 系统已尝试自动删除 node_modules 与 package-lock.json 并重新安装依赖。\n';
+                friendlyTips += '3. 如果仍然失败，可手动在项目目录执行：rm -rf node_modules package-lock.json && npm install。\n';
+                friendlyTips += '4. 依赖安装完成后，再点击“重新编译”重试。\n';
+            } else {
+                friendlyTips += '1. 先在对话框中记录完整报错信息。\n';
+                friendlyTips += '2. 在首页服务器目录运行 /api/system/check 查看 Node 与 npm 环境。\n';
+                friendlyTips += '3. 如仍无法定位问题，可查看 server.log 中对应项目的构建日志。\n';
+            }
+            
+            statusDiv.textContent = `编译失败: ${rawError}`;
             statusDiv.style.color = '#e74c3c';
             
             setTimeout(() => {
                 loadingDiv.remove();
-                alert(`编译失败: ${data.error || '未知错误'}\n\n${data.details || ''}`);
+                alert(`编译失败: ${rawError}\n\n${data.details || '' || ''}${friendlyTips}`);
             }, 3000);
         }
     } catch (error) {
@@ -3101,8 +3400,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showVersionDialog();
     });
     
-    // 每60秒自动刷新（优化：减少刷新频率）
-    setInterval(loadTree, 60000);
+    // 取消定时自动刷新：仅在页面加载、显式操作（新增/删除/重命名/同步/重新识别）时刷新
+    // setInterval(loadTree, 60000);
 });
 
 // 显示版本历史对话框（性能优化：添加加载状态和错误处理）
