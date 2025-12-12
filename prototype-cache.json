@@ -3,12 +3,12 @@
     "/Users/kuangxb/Desktop/首页自动化展示/资料": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764638009202
+      "modified": 1765537604678
     },
     "/Users/kuangxb/Desktop/首页自动化展示/us-cryptography-service-platform": {
       "hasIndex": true,
       "indexFile": "index.html",
-      "modified": 1764637848405,
+      "modified": 1765537604724,
       "gitConfig": {
         "repoUrl": "http://192.168.206.15/unified-service/us-cryptography-service-platform.git",
         "branch": "main",
@@ -24,7 +24,7 @@
     "/Users/kuangxb/Desktop/首页自动化展示/中文/子目录": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764638009214
+      "modified": 1765537599109
     },
     "/Users/kuangxb/Desktop/首页自动化展示/子目录/子目录": {
       "hasIndex": false,
@@ -59,22 +59,50 @@
     "/Users/kuangxb/Desktop/首页自动化展示/sv": {
       "hasIndex": true,
       "indexFile": "index.html",
-      "modified": 1764592266347
+      "modified": 1765537604734
     },
     "/Users/kuangxb/Desktop/首页自动化展示/2": {
       "hasIndex": false,
       "indexFile": null,
       "modified": 1764586714047
     },
-    "/Users/kuangxb/Desktop/首页自动化展示/awesome-project1": {
-      "hasIndex": true,
-      "indexFile": "dist/index.html",
-      "modified": 1764590673827
-    },
     "/Users/kuangxb/Desktop/首页自动化展示/中文/22": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1764593141035
+      "modified": 1765537604680
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/watermarking": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1765537604637,
+      "gitConfig": {
+        "repoUrl": "http://192.168.206.15/Clair/watermarking.git",
+        "branch": "main",
+        "username": "kuangxb@myibc.net",
+        "targetPath": ""
+      }
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/awesome-project1": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1765537607670,
+      "gitConfig": {
+        "repoUrl": "http://192.168.206.15/Clair/awesome-project1.git",
+        "branch": "main",
+        "username": "kuangxb@myibc.net",
+        "targetPath": ""
+      }
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/中文/子目录/awesome-project1": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1765537604633,
+      "gitConfig": {
+        "repoUrl": "http://192.168.206.15/Clair/awesome-project1.git",
+        "branch": "main",
+        "username": "kuangxb@myibc.net",
+        "targetPath": "/Users/kuangxb/Desktop/首页自动化展示/中文/子目录"
+      }
     }
   },
   "lastScan": null

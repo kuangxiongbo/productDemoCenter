@@ -7,7 +7,7 @@ const { execSync } = require('child_process');
 const archiver = require('archiver');
 
 const app = express();
-const PORT = 3000;
+const PORT = 4000;
 
 // 性能优化：添加缓存机制
 const cache = {
@@ -90,9 +90,19 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   // 匹配：/路径/ 或 /路径/xxx（但不包括 /路径/dist/，避免循环处理）
   // 支持嵌套路径，如 /密码服务业务线/统一密码服务平台/
-  if (!req.path.startsWith('/dist/') && !req.path.includes('/dist/')) {
+  // 解码 URL 编码的路径（处理中文路径）
+  // Express 在某些情况下（如通过 curl 或某些客户端）可能返回编码后的路径
+  let decodedPath = req.path;
+  try {
+    decodedPath = decodeURIComponent(req.path);
+  } catch (e) {
+    // 如果解码失败（可能已经是解码后的），使用原始路径
+    decodedPath = req.path;
+  }
+  
+  if (!decodedPath.startsWith('/dist/') && !decodedPath.includes('/dist/')) {
     // 尝试匹配所有可能的路径组合，从最长到最短
-    const pathParts = req.path.split('/').filter(p => p);
+    const pathParts = decodedPath.split('/').filter(p => p);
     
     // 从最长路径开始尝试（支持嵌套目录）
     for (let i = pathParts.length; i > 0; i--) {
@@ -134,7 +144,7 @@ app.use((req, res, next) => {
             req._projectRelativePath = relativePath.startsWith('/') ? relativePath : '/' + relativePath;
             req._distIndexPath = distIndexPath;
             req._projectPath = projectPath;
-            req._handledByMiddleware = true;
+            // 不设置 req._handledByMiddleware，让路由修复中间件处理（注入修复代码）
             console.log(`[项目根目录服务] ${req.path} -> 找到项目，将服务 dist/index.html，相对路径: ${req._projectRelativePath}`);
             // 不在这里直接返回，让路由修复中间件处理（注入修复代码）
             break; // 找到匹配的项目，停止搜索
@@ -189,16 +199,25 @@ app.use((req, res, next) => {
   let filePath = null;
   let isDistRequest = false;
   
+  // 解码 URL 编码的路径（处理中文路径）
+  let decodedPath = req.path;
+  try {
+    decodedPath = decodeURIComponent(req.path);
+  } catch (e) {
+    // 如果解码失败（可能已经是解码后的），使用原始路径
+    decodedPath = req.path;
+  }
+  
   // 检测是否是 dist/index.html 请求
-  if (req.path.endsWith('/dist/index.html') || (req.path.endsWith('/dist/') && req.query._format !== 'raw')) {
+  if (decodedPath.endsWith('/dist/index.html') || (decodedPath.endsWith('/dist/') && req.query._format !== 'raw')) {
     // 处理 /dist/ 结尾的路径，转换为 /dist/index.html
-    const actualPath = req.path.endsWith('/dist/') ? req.path + 'index.html' : req.path;
+    const actualPath = decodedPath.endsWith('/dist/') ? decodedPath + 'index.html' : decodedPath;
     filePath = path.join(__dirname, actualPath.substring(1));
     isDistRequest = true;
     // 提取项目相对路径（用于路径修复）
-    if (req.path.includes('/dist/')) {
-      const distIndex = req.path.indexOf('/dist/');
-      req._projectRelativePath = req.path.substring(0, distIndex);
+    if (decodedPath.includes('/dist/')) {
+      const distIndex = decodedPath.indexOf('/dist/');
+      req._projectRelativePath = decodedPath.substring(0, distIndex);
     }
   } 
   // 检测是否是项目根目录请求（会服务 dist/index.html）
@@ -209,7 +228,7 @@ app.use((req, res, next) => {
     isDistRequest = true;
   } else {
     // 尝试匹配所有可能的路径组合，从最长到最短（支持嵌套目录）
-    const pathParts = req.path.split('/').filter(p => p);
+    const pathParts = decodedPath.split('/').filter(p => p);
     
     for (let i = pathParts.length; i > 0; i--) {
       const testPath = '/' + pathParts.slice(0, i).join('/');
@@ -231,13 +250,46 @@ app.use((req, res, next) => {
           break;
         } else {
           // 访问子路径，检查是否是 dist 目录中的文件
-          const requestedPath = path.join(distPath, subPath.substring(1));
-          if (fs.existsSync(requestedPath) && fs.statSync(requestedPath).isFile() && requestedPath.endsWith('.html')) {
-            filePath = requestedPath;
-            isDistRequest = true;
-            const relativePath = path.relative(__dirname, projectPath).replace(/\\/g, '/');
-            req._projectRelativePath = relativePath.startsWith('/') ? relativePath : '/' + relativePath;
-            break;
+          // 如果 subPath 以 /dist/ 开头，说明剩余路径已经包含了 dist，直接使用
+          // 否则，需要拼接 dist 目录
+          let requestedPath;
+          if (subPath.startsWith('/dist/')) {
+            // 剩余路径已经包含 dist，直接拼接项目路径
+            requestedPath = path.join(projectPath, subPath.substring(1));
+          } else {
+            // 剩余路径不包含 dist，需要拼接 dist 目录
+            requestedPath = path.join(distPath, subPath.substring(1));
+          }
+          
+          if (fs.existsSync(requestedPath)) {
+            const stats = fs.statSync(requestedPath);
+            if (stats.isFile()) {
+              // 是文件，直接返回（包括 HTML、JS、CSS、图片等所有资源文件）
+              filePath = requestedPath;
+              isDistRequest = true;
+              const relativePath = path.relative(__dirname, projectPath).replace(/\\/g, '/');
+              req._projectRelativePath = relativePath.startsWith('/') ? relativePath : '/' + relativePath;
+              
+              // 如果是 HTML 文件，让路由修复中间件处理（注入修复代码）
+              // 如果是其他资源文件（JS、CSS、图片等），直接返回
+              if (!requestedPath.endsWith('.html')) {
+                req._handledByMiddleware = true;
+                // 直接返回文件
+                return res.sendFile(requestedPath);
+              }
+              
+              break;
+            } else if (stats.isDirectory()) {
+              // 是目录，尝试返回 index.html
+              const dirIndexPath = path.join(requestedPath, 'index.html');
+              if (fs.existsSync(dirIndexPath)) {
+                filePath = dirIndexPath;
+                isDistRequest = true;
+                const relativePath = path.relative(__dirname, projectPath).replace(/\\/g, '/');
+                req._projectRelativePath = relativePath.startsWith('/') ? relativePath : '/' + relativePath;
+                break;
+              }
+            }
           }
         }
       }
