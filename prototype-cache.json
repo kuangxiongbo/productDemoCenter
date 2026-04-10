@@ -3,7 +3,7 @@
     "/Users/kuangxb/Desktop/首页自动化展示/资料": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1765761280271
+      "modified": 1775017762613
     },
     "/Users/kuangxb/Desktop/首页自动化展示/us-cryptography-service-platform": {
       "hasIndex": true,
@@ -24,7 +24,7 @@
     "/Users/kuangxb/Desktop/首页自动化展示/中文/子目录": {
       "hasIndex": false,
       "indexFile": null,
-      "modified": 1765761280234
+      "modified": 1775017007093
     },
     "/Users/kuangxb/Desktop/首页自动化展示/子目录/子目录": {
       "hasIndex": false,
@@ -96,13 +96,208 @@
     "/Users/kuangxb/Desktop/首页自动化展示/中文/子目录/awesome-project1": {
       "hasIndex": true,
       "indexFile": "dist/index.html",
-      "modified": 1765761280267,
+      "modified": 1775017007151,
       "gitConfig": {
         "repoUrl": "http://192.168.206.15/Clair/awesome-project1.git",
         "branch": "main",
         "username": "kuangxb@myibc.net",
         "targetPath": "/Users/kuangxb/Desktop/首页自动化展示/中文/子目录"
       }
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/awesome-project1": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775211732123
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/us-cryptography-service-platform": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775234360831
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/git-repo": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1775211698018
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/vpn": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1775211687260
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/hsm": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775211698305
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/SRqzgw": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1775213871232
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/teg-s": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775215302140
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/终端管理设计": {
+      "hasIndex": false,
+      "indexFile": null,
+      "modified": 1775211698996
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/集中管理平台-测绘": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775211699143
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/0.0.4版本原型（水印与溯源服务）": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775211828612
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/watermarking": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775211849195
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/数据脱敏与水印平台": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775211849578
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/文件分发管控授权中心": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775211849676
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/ca-frontend": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775215058709
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/docker": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775215059115
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/kmc-frontend": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775215096186
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/ocsp-frontend": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775215146301
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/ra-frontend": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775215185254
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/gateway503": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775215276097
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/space-time-project": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775215276378
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/hsm-540": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775215301563
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/teg-admin": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775215302275
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/gateway-admin": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775215416636
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/terminal-encrypt": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775215417523
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/kms-monitor": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775215515771
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/yypt": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775215833898
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/watermark-004": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775215834045
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/watermark10": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775215923242
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/sjtm": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775215923860
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/wjff": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775215923945
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/test-git-sync": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775230908881
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/sitmap": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775235824787
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/site": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775232197076
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/sitetest": {
+      "hasIndex": true,
+      "indexFile": "index.html",
+      "modified": 1775232397104
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/git-repo/hsm-frontend": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775236734083
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/ca/ca-frontend": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775814479205
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/ca/kmc-frontend": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775814482727
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/ca/ocsp-frontend": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775814486088
+    },
+    "/Users/kuangxb/Desktop/首页自动化展示/data/prototypes/ca/ra-frontend": {
+      "hasIndex": true,
+      "indexFile": "dist/index.html",
+      "modified": 1775814490018
     }
   },
   "lastScan": null

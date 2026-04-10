@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+  app:
+    image: 192.168.210.90:6000/kuangxiongbo/product-demo-center:latest
+    container_name: product-demo-center
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - DB_HOST=${DB_HOST:-192.168.210.90}
+      - DB_PORT=${DB_PORT:-5433}
+      - DB_USER=${DB_USER:-DemoCenter}
+      - DB_PASSWORD=${DB_PASSWORD:-4wfsFzr8cp2t8RXp}
+      - DB_NAME=${DB_NAME:-DemoCenter}
+      - PORT=${PORT:-4000}
+      - PROTOTYPES_ROOT=${PROTOTYPES_ROOT:-data/prototypes}
+      - HOST_DATA_ROOT=${HOST_DATA_ROOT:-/原型Demo/data}
+      - HOST_TEMP_ROOT=${HOST_TEMP_ROOT:-/原型Demo/temp}
+    volumes:
+      - ${HOST_DATA_ROOT:-/原型Demo/data}:/app/data/prototypes
+      - ${HOST_TEMP_ROOT:-/原型Demo/temp}:/app/data/temp_uploads
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - demo-network
+
+networks:
+  demo-network:
+    driver: bridge

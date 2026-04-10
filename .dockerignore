@@ -1,0 +1,11 @@
+node_modules
+data
+.versions
+temp_uploads
+.git
+.env
+bak
+tmp
+*.log
+Dockerfile
+docker-compose.yml

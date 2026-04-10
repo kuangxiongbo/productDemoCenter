@@ -3,64 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>原型演示系统</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Prototype Center | 原型演示系统</title>
+    <link rel="stylesheet" href="style.css?v=1.0.1">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
         <!-- 顶部导航栏 -->
         <header class="app-header">
             <div class="header-content">
-                <h1 class="logo">
-                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                <a href="/" class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                        <path d="M2 17L12 22L22 17"/>
+                        <path d="M2 12L12 17L22 12"/>
                     </svg>
-                    <span class="logo-text">原型演示系统</span>
-                </h1>
+                    <span class="logo-text">Prototype Center</span>
+                </a>
+                
                 <div class="header-actions">
                     <div class="search-box">
-                        <input type="text" id="searchInput" placeholder="搜索原型和目录..." />
+                        <input type="text" id="searchInput" placeholder="搜索项目或原型..." />
                         <span class="search-icon">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="7" cy="7" r="4" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                                <path d="M10 10L13 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                             </svg>
                         </span>
                     </div>
-                    <button class="sync-git-btn" id="syncGitBtn" title="同步Git仓库原型">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>同步Git仓库原型</span>
-                    </button>
-                    <button class="upload-folder-btn" id="uploadFolderBtn" title="上传原型文件夹">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M9 14l3-3 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>上传原型文件夹</span>
-                    </button>
-                    <button class="link-prototype-btn" id="linkPrototypeBtn" title="链接到原型">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>链接到原型</span>
-                    </button>
-                    <button class="version-history-btn" id="versionHistoryBtn" title="版本历史">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10 2C5.58 2 2 5.58 2 10C2 14.42 5.58 18 10 18C14.42 18 18 14.42 18 10C18 5.58 14.42 2 10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                            <path d="M10 6V10L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <button class="refresh-btn" id="refreshBtn" title="刷新">
-                        <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M1 4V10H7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M23 20V14H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14L18.36 18.36A9 9 0 0 1 3.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    
+                    <!-- 联合新建按钮 -->
+                    <div class="dropdown">
+                        <button class="btn-primary" id="newBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            新建原型
+                        </button>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-menu-inner">
+                                <a href="#" id="menuItemGit">
+                                    <svg viewBox="0 0 23 23" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zM12 2v4M10 22h4"/></svg>
+                                    Git 同步
+                                </a>
+                                <a href="#" id="menuItemUpload">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                                    文件夹上传
+                                </a>
+                                <a href="#" id="menuItemLink">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                                    外部链接映射
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn-icon" id="refreshBtn" title="刷新">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                         </svg>
                     </button>
                 </div>
@@ -71,26 +72,28 @@
         <div class="main-content">
             <!-- 左侧树形导航 -->
             <aside class="sidebar">
-                <div class="sidebar-header">
-                    <h2>目录导航</h2>
+                <div class="sidebar-nav-header">目录导航</div>
+                <div class="sidebar-home-item" id="sidebarHome" onclick="goHome()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1m-6 0h6"></path></svg>
+                    <span>首页</span>
                 </div>
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-                    <p>正在加载...</p>
+                <div class="loading" id="loading" style="display:none">
+                    <div class="spinner"></div>
+                    <p>正在生成树形结构...</p>
                 </div>
                 <div class="tree-container" id="treeContainer">
-                    <!-- 树形导航将在这里生成 -->
-        </div>
+                    <!-- 树形导航将由 script.js 自动生成 -->
+                </div>
             </aside>
 
             <!-- 右侧详情区 -->
             <main class="content-area">
                 <div class="content-header">
-                    <h2 id="contentTitle">请选择目录</h2>
+                    <h2 id="contentTitle">请选择项目</h2>
                 </div>
-                <div class="content-body" id="contentBody">
+                <div id="contentBody">
                     <div class="empty-state">
-                        <p>👈 从左侧选择目录查看详情</p>
+                        <p>👈 请从左侧导航栏选择一个项目查看详情</p>
                     </div>
                 </div>
             </main>
@@ -98,163 +101,42 @@
         
         <!-- 错误提示 -->
         <div class="error" id="error" style="display: none;">
-            <p>❌ 加载失败，请检查服务器是否正常运行</p>
+            <p>❌ 服务端响应错误，请检查网络或后端状态</p>
         </div>
 
-        <!-- 版本历史对话框 -->
-        <div class="version-modal" id="versionModal" style="display: none;">
-            <div class="version-modal-content">
-                <div class="version-modal-header">
-                    <h3>版本历史</h3>
-                    <button class="version-modal-close" onclick="closeVersionDialog()">×</button>
+        <!-- 自定义模拟弹窗 (Modal) -->
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <h3 id="modalTitle">提示</h3>
+                    <button class="modal-close-icon" id="modalClose">&times;</button>
                 </div>
-                <div class="version-modal-body">
-                    <div class="version-list" id="versionList">
-                        <div class="version-loading">加载中...</div>
-                    </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- 动态内容 -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" id="modalCancel">取消</button>
+                    <button class="btn-primary" id="modalConfirm">确定</button>
                 </div>
             </div>
         </div>
 
-        <!-- 目录操作对话框 -->
-        <div class="folder-modal" id="folderModal" style="display: none;">
-            <div class="folder-modal-content">
-                <div class="folder-modal-header">
-                    <h3 id="folderModalTitle">操作目录</h3>
-                    <button class="folder-modal-close" onclick="closeFolderDialog()">×</button>
+        <!-- 子弹窗：Monorepo 子项目内「编辑」时使用，不关闭底层子项目列表 -->
+        <div class="modal-overlay modal-overlay-nested" id="modalOverlayNested">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <h3 id="modalTitleNested">提示</h3>
+                    <button type="button" class="modal-close-icon" id="modalCloseNested">&times;</button>
                 </div>
-                <div class="folder-modal-body">
-                    <form id="folderForm">
-                        <div class="folder-input-wrapper">
-                            <label for="folderNameInput" id="folderNameLabel">目录名称：</label>
-                            <input type="text" id="folderNameInput" name="folderName" class="folder-name-input" required />
-                        </div>
-                        <!-- 进度与结果提示，统一显示在按钮上方 -->
-                        <div class="folder-status-text" id="folderStatus" style="margin-top:8px;font-size:12px;color:#999;min-height:16px;"></div>
-                        <div class="folder-actions">
-                            <button type="button" class="folder-cancel-btn" onclick="closeFolderDialog()">取消</button>
-                            <button type="submit" class="folder-submit-btn" id="folderSubmitBtn">确定</button>
-                        </div>
-                        <!-- 隐藏字段，存储操作类型和目标路径 -->
-                        <input type="hidden" id="folderOperation" name="operation" />
-                        <input type="hidden" id="folderTargetPath" name="targetPath" />
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- 上传对话框 -->
-        <div class="upload-modal" id="uploadModal" style="display: none;">
-            <div class="upload-modal-content">
-                <div class="upload-modal-header">
-                    <h3 id="uploadModalTitle">上传原型文件夹</h3>
-                    <button class="upload-modal-close" onclick="closeUploadDialog()">×</button>
-                </div>
-                <div class="upload-modal-body">
-                    <form id="uploadForm">
-                        <div class="upload-directory-selector" id="uploadDirectorySelector">
-                            <label for="uploadDirectorySelect">上传到目录：</label>
-                            <select id="uploadDirectorySelect" name="targetPath" class="upload-directory-select">
-                                <option value="">根目录</option>
-                            </select>
-                        </div>
-                        <div class="upload-input-wrapper">
-                            <input type="file" id="uploadFileInput" name="files" webkitdirectory directory multiple required />
-                            <label for="uploadFileInput" class="upload-file-label">
-                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M12 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M9 14l3-3 3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <span id="uploadFileLabel">选择文件夹</span>
-                            </label>
-                            <div class="upload-file-name" id="uploadFileName"></div>
-                        </div>
-                        <div class="upload-actions">
-                            <button type="button" class="upload-cancel-btn" onclick="closeUploadDialog()">取消</button>
-                            <button type="submit" class="upload-submit-btn">上传</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Git同步对话框 -->
-        <div class="git-sync-modal" id="gitSyncModal" style="display: none;">
-            <div class="git-sync-modal-content">
-                <div class="git-sync-modal-header">
-                    <h3>同步Git仓库原型</h3>
-                    <button class="git-sync-modal-close" onclick="closeGitSyncDialog()">×</button>
-                </div>
-                <div class="git-sync-modal-body">
-                    <form id="gitSyncForm">
-                        <div class="git-sync-input-wrapper">
-                            <label for="gitRepoUrl">Git仓库地址：</label>
-                            <input type="text" id="gitRepoUrl" name="repoUrl" class="git-repo-input" placeholder="https://github.com/username/repo.git" required />
-                        </div>
-                        <div class="git-sync-input-wrapper">
-                            <label for="gitBranch">分支名称（可选）：</label>
-                            <input type="text" id="gitBranch" name="branch" class="git-branch-input" placeholder="main" />
-                        </div>
-                        <div class="git-sync-input-wrapper">
-                            <label for="gitUsername">用户名（可选，私有仓库需要）：</label>
-                            <input type="text" id="gitUsername" name="username" class="git-username-input" placeholder="Git用户名" />
-                        </div>
-                        <div class="git-sync-input-wrapper">
-                            <label for="gitPassword">密码/Token（可选，私有仓库需要）：</label>
-                            <input type="password" id="gitPassword" name="password" class="git-password-input" placeholder="Git密码或访问令牌" />
-                        </div>
-                        <div class="git-sync-input-wrapper">
-                            <label for="gitTargetPath">同步到目录：</label>
-                            <select id="gitTargetPath" name="targetPath" class="git-target-select">
-                                <option value="">根目录</option>
-                            </select>
-                        </div>
-                        <div class="git-sync-actions">
-                            <button type="button" class="git-sync-cancel-btn" onclick="closeGitSyncDialog()">取消</button>
-                            <button type="submit" class="git-sync-submit-btn">同步</button>
-                        </div>
-                    </form>
-                    <div class="git-sync-status" id="gitSyncStatus" style="display: none;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 链接到原型对话框 -->
-        <div class="link-prototype-modal" id="linkPrototypeModal" style="display: none;">
-            <div class="link-prototype-modal-content">
-                <div class="link-prototype-modal-header">
-                    <h3>链接到原型</h3>
-                    <button class="link-prototype-modal-close" onclick="closeLinkPrototypeDialog()">×</button>
-                </div>
-                <div class="link-prototype-modal-body">
-                    <form id="linkPrototypeForm">
-                        <div class="link-prototype-input-wrapper">
-                            <label for="linkPrototypeName">原型名称：</label>
-                            <input type="text" id="linkPrototypeName" name="name" class="link-prototype-name-input" placeholder="请输入原型名称" required />
-                        </div>
-                        <div class="link-prototype-input-wrapper">
-                            <label for="linkPrototypeUrl">链接地址：</label>
-                            <input type="url" id="linkPrototypeUrl" name="url" class="link-prototype-url-input" placeholder="https://example.com" required />
-                        </div>
-                        <div class="link-prototype-input-wrapper">
-                            <label for="linkPrototypeTargetPath">保存位置：</label>
-                            <select id="linkPrototypeTargetPath" name="targetPath" class="link-prototype-target-select">
-                                <option value="">根目录</option>
-                            </select>
-                        </div>
-                        <div class="link-prototype-actions">
-                            <button type="button" class="link-prototype-cancel-btn" onclick="closeLinkPrototypeDialog()">取消</button>
-                            <button type="submit" class="link-prototype-submit-btn">保存</button>
-                        </div>
-                    </form>
-                    <div class="link-prototype-status" id="linkPrototypeStatus" style="display: none;"></div>
+                <div class="modal-body" id="modalBodyNested"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="modalCancelNested">取消</button>
+                    <button type="button" class="btn-primary" id="modalConfirmNested">确定</button>
                 </div>
             </div>
         </div>
     </div>
     
-    <script src="script.js"></script>
+    <script src="script.js?v=1.0.5"></script>
 </body>
 </html>
-
