@@ -116,6 +116,12 @@ function defaultMonorepoChildBaseSlug(parentProto, repoFolderName, subDirName) {
   return `${slugSegment(repoFolderName)}-${subSeg}`;
 }
 
+/** 与 DB findPrototypeByPath 使用同一套磁盘路径 → relPath 推导 */
+function prototypeRelPathForDiskSegment(seg) {
+  const cloneDir = path.join(path.resolve(PROTOTYPES_ROOT), seg);
+  return path.relative(PROJECT_ROOT, cloneDir).replace(/\\/g, '/');
+}
+
 function isMonorepoAutoChild(proto) {
   return !!(proto && proto.parentPrototypeId && proto.gitConfig && proto.gitConfig.autoDiscovered);
 }
@@ -471,8 +477,9 @@ router.post('/:id/sync', async (req, res) => {
                     );
                     return;
                 }
-                globalQueue.updateStatus(taskId, 'processing', '正在拉取最新代码...');
-                await execAsync(`git -C "${gitRoot}" pull`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+                globalQueue.updateStatus(taskId, 'processing', '正在拉取最新代码 (强制覆盖本地修改)...');
+                const branch = (gc.branch || 'main').trim();
+                await execAsync(`git -C "${gitRoot}" fetch --all && git -C "${gitRoot}" reset --hard origin/${branch}`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
                 if (proto.type === 'git-monorepo') {
                     try {
                         const r = await monorepoAfterPullCompileChildren(proto, taskId, globalQueue, gitRoot, '更新');
@@ -563,45 +570,69 @@ router.post('/git-sync-global', async (req, res) => {
               globalQueue.updateStatus(taskId, 'failed', '自动多子目录模式请勿填写「子项目目录」');
               return;
             }
-            const cloneDir = path.join(path.resolve(PROTOTYPES_ROOT), repoFolderName);
-            globalQueue.updateStatus(taskId, 'processing', '正在拉取 Monorepo 仓库...');
+            const safeBaseAuto = String(repoFolderName || 'git-repo').trim() || 'git-repo';
+            let diskFolderName;
+            let cloneDir;
+            let relPath;
+            let parentProto;
+            let slotOk = false;
+            for (let slotIdx = 0; slotIdx < 200; slotIdx += 1) {
+              diskFolderName = slotIdx === 0 ? safeBaseAuto : `${safeBaseAuto}-${slotIdx + 1}`;
+              cloneDir = path.join(path.resolve(PROTOTYPES_ROOT), diskFolderName);
+              relPath = prototypeRelPathForDiskSegment(diskFolderName);
+              const pre = await db.findPrototypeByPath(relPath);
+              if (pre && pre.type !== 'git-monorepo') continue;
 
-            if (fs.existsSync(path.join(cloneDir, '.git'))) {
-              await execAsync(`git -C "${cloneDir}" pull`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
-            } else {
-              if (fs.existsSync(cloneDir)) {
-                console.log(`[GitSync] 目标路径已存在但非 Git 仓库，正在清理: ${cloneDir}`);
-                fs.rmSync(cloneDir, { recursive: true, force: true });
+              const pullMsg = diskFolderName !== repoFolderName
+                ? `正在拉取 Monorepo 仓库（本地目录已避让为 ${diskFolderName}）...`
+                : '正在拉取 Monorepo 仓库...';
+              globalQueue.updateStatus(taskId, 'processing', pullMsg);
+
+              if (fs.existsSync(path.join(cloneDir, '.git'))) {
+                await execAsync(`git -C "${cloneDir}" fetch --all && git -C "${cloneDir}" reset --hard origin/${branch}`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+              } else {
+                if (fs.existsSync(cloneDir)) {
+                  console.log(`[GitSync] 目标路径已存在但非 Git 仓库，正在清理: ${cloneDir}`);
+                  fs.rmSync(cloneDir, { recursive: true, force: true });
+                }
+                if (!fs.existsSync(path.dirname(cloneDir))) fs.mkdirSync(path.dirname(cloneDir), { recursive: true });
+                await execAsync(`git -C "${path.dirname(cloneDir)}" clone -b ${branch} "${authenticatedUrl}" "${diskFolderName}"`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
               }
-              if (!fs.existsSync(path.dirname(cloneDir))) fs.mkdirSync(path.dirname(cloneDir), { recursive: true });
-              await execAsync(`git -C "${path.dirname(cloneDir)}" clone -b ${branch} "${authenticatedUrl}" "${repoFolderName}"`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+
+              parentProto = await db.findPrototypeByPath(relPath);
+              if (parentProto && parentProto.type !== 'git-monorepo') {
+                console.warn(`[GitSync] Monorepo 克隆后路径 ${relPath} 仍与非 Monorepo 记录冲突，尝试下一目录`);
+                if (fs.existsSync(cloneDir)) fs.rmSync(cloneDir, { recursive: true, force: true });
+                continue;
+              }
+
+              if (parentProto) {
+                await db.updatePrototype(parentProto.id, {
+                  gitConfig: { ...parentProto.gitConfig, repoUrl, branch, username, monorepoRoot: true, autoDiscovered: true },
+                  displayName: customName || parentProto.displayName || diskFolderName,
+                  modified: new Date()
+                });
+                parentProto = await db.getPrototypeById(parentProto.id);
+              } else {
+                const created = await db.addPrototype({
+                  orgId,
+                  displayName: customName || diskFolderName,
+                  path: relPath,
+                  url: '',
+                  type: 'git-monorepo',
+                  indexFile: '',
+                  logoUrl: '',
+                  slug: (customSlug && String(customSlug).trim()) || null,
+                  gitConfig: { repoUrl, branch, username, monorepoRoot: true, autoDiscovered: true }
+                });
+                parentProto = created;
+              }
+              slotOk = true;
+              break;
             }
-
-            const relPath = path.relative(PROJECT_ROOT, cloneDir).replace(/\\/g, '/');
-            let parentProto = await db.findPrototypeByPath(relPath);
-            if (parentProto) {
-              if (parentProto.type !== 'git-monorepo') {
-                throw new Error('该克隆目录已被非 Monorepo 原型占用');
-              }
-              await db.updatePrototype(parentProto.id, {
-                gitConfig: { ...parentProto.gitConfig, repoUrl, branch, username, monorepoRoot: true, autoDiscovered: true },
-                displayName: customName || parentProto.displayName || repoFolderName,
-                modified: new Date()
-              });
-              parentProto = await db.getPrototypeById(parentProto.id);
-            } else {
-              const created = await db.addPrototype({
-                orgId,
-                displayName: customName || repoFolderName,
-                path: relPath,
-                url: '',
-                type: 'git-monorepo',
-                indexFile: '',
-                logoUrl: '',
-                slug: (customSlug && String(customSlug).trim()) || null,
-                gitConfig: { repoUrl, branch, username, monorepoRoot: true, autoDiscovered: true }
-              });
-              parentProto = created;
+            if (!slotOk || !parentProto) {
+              globalQueue.updateStatus(taskId, 'failed', '无法为 Monorepo 分配到可用本地目录（冲突过多）');
+              return;
             }
 
             const subs = discoverMonorepoSubdirs(cloneDir);
@@ -620,7 +651,7 @@ router.post('/git-sync-global', async (req, res) => {
                 const pipelinePath = path.join(cloneDir, sub);
                 const relChild = path.relative(PROJECT_ROOT, pipelinePath).replace(/\\/g, '/');
                 const existingChild = await db.findPrototypeByPath(relChild);
-                const baseSlug = defaultMonorepoChildBaseSlug(parentProto, repoFolderName, sub);
+                const baseSlug = defaultMonorepoChildBaseSlug(parentProto, diskFolderName, sub);
                 const childSlug = existingChild && existingChild.slug
                   ? existingChild.slug
                   : await allocateUniqueSlug(baseSlug);
@@ -673,8 +704,8 @@ router.post('/git-sync-global', async (req, res) => {
               throw new Error('父仓库本地目录无效，请重新同步 Monorepo 根');
             }
 
-            globalQueue.updateStatus(taskId, 'processing', '正在拉取父仓库最新代码...');
-            await execAsync(`git -C "${cloneDir}" pull`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+            globalQueue.updateStatus(taskId, 'processing', '正在拉取父仓库最新代码 (强制覆盖)...');
+            await execAsync(`git -C "${cloneDir}" fetch --all && git -C "${cloneDir}" reset --hard origin/${parent.gitConfig.branch || branch}`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
 
             if (!isSafePath(cloneDir, subPathNorm)) {
               throw new Error('子项目目录路径不合法');
@@ -712,46 +743,68 @@ router.post('/git-sync-global', async (req, res) => {
               globalQueue.updateStatus(taskId, 'failed', 'Monorepo 根模式请勿填写子项目目录');
               return;
             }
-            const cloneDir = path.join(path.resolve(PROTOTYPES_ROOT), repoFolderName);
-            globalQueue.updateStatus(taskId, 'processing', '正在拉取 Monorepo 仓库...');
+            const safeBaseRoot = String(repoFolderName || 'git-repo').trim() || 'git-repo';
+            let diskFolderName;
+            let cloneDir;
+            let relPath;
+            let rootDone = false;
+            for (let slotIdx = 0; slotIdx < 200; slotIdx += 1) {
+              diskFolderName = slotIdx === 0 ? safeBaseRoot : `${safeBaseRoot}-${slotIdx + 1}`;
+              cloneDir = path.join(path.resolve(PROTOTYPES_ROOT), diskFolderName);
+              relPath = prototypeRelPathForDiskSegment(diskFolderName);
+              const pre = await db.findPrototypeByPath(relPath);
+              if (pre && pre.type !== 'git-monorepo') continue;
 
-            if (fs.existsSync(path.join(cloneDir, '.git'))) {
-              await execAsync(`git -C "${cloneDir}" pull`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
-            } else {
-              if (fs.existsSync(cloneDir)) {
-                console.log(`[GitSync] 目标路径已存在但非 Git 仓库，正在清理: ${cloneDir}`);
-                fs.rmSync(cloneDir, { recursive: true, force: true });
+              const rootPullMsg = diskFolderName !== repoFolderName
+                ? `正在拉取 Monorepo 仓库（本地目录已避让为 ${diskFolderName}）...`
+                : '正在拉取 Monorepo 仓库...';
+              globalQueue.updateStatus(taskId, 'processing', rootPullMsg);
+
+              if (fs.existsSync(path.join(cloneDir, '.git'))) {
+                await execAsync(`git -C "${cloneDir}" fetch --all && git -C "${cloneDir}" reset --hard origin/${branch}`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+              } else {
+                if (fs.existsSync(cloneDir)) {
+                  console.log(`[GitSync] 目标路径已存在但非 Git 仓库，正在清理: ${cloneDir}`);
+                  fs.rmSync(cloneDir, { recursive: true, force: true });
+                }
+                if (!fs.existsSync(path.dirname(cloneDir))) fs.mkdirSync(path.dirname(cloneDir), { recursive: true });
+                await execAsync(`git -C "${path.dirname(cloneDir)}" clone -b ${branch} "${authenticatedUrl}" "${diskFolderName}"`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
               }
-              if (!fs.existsSync(path.dirname(cloneDir))) fs.mkdirSync(path.dirname(cloneDir), { recursive: true });
-              await execAsync(`git -C "${path.dirname(cloneDir)}" clone -b ${branch} "${authenticatedUrl}" "${repoFolderName}"`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
-            }
 
-            const relPath = path.relative(PROJECT_ROOT, cloneDir).replace(/\\/g, '/');
-            const existing = await db.findPrototypeByPath(relPath);
-            if (existing) {
-              if (existing.type === 'git-monorepo') {
+              const existing = await db.findPrototypeByPath(relPath);
+              if (existing && existing.type !== 'git-monorepo') {
+                console.warn(`[GitSync] Monorepo 根克隆后路径 ${relPath} 仍与非 Monorepo 冲突，尝试下一目录`);
+                if (fs.existsSync(cloneDir)) fs.rmSync(cloneDir, { recursive: true, force: true });
+                continue;
+              }
+              if (existing && existing.type === 'git-monorepo') {
                 await db.updatePrototype(existing.id, {
                   gitConfig: { ...existing.gitConfig, repoUrl, branch, username, monorepoRoot: true },
                   modified: new Date()
                 });
                 globalQueue.updateStatus(taskId, 'success', 'Monorepo 仓库已存在，已拉取最新代码');
-                return;
+                rootDone = true;
+                break;
               }
-              throw new Error('该克隆目录已被其他原型占用');
-            }
 
-            await db.addPrototype({
-              orgId,
-              displayName: customName || repoFolderName,
-              path: relPath,
-              url: '',
-              type: 'git-monorepo',
-              indexFile: '',
-              logoUrl: '',
-              slug: (customSlug && String(customSlug).trim()) || null,
-              gitConfig: { repoUrl, branch, username, monorepoRoot: true }
-            });
-            globalQueue.updateStatus(taskId, 'success', 'Monorepo 仓库克隆完成，请添加子项目');
+              await db.addPrototype({
+                orgId,
+                displayName: customName || diskFolderName,
+                path: relPath,
+                url: '',
+                type: 'git-monorepo',
+                indexFile: '',
+                logoUrl: '',
+                slug: (customSlug && String(customSlug).trim()) || null,
+                gitConfig: { repoUrl, branch, username, monorepoRoot: true }
+              });
+              globalQueue.updateStatus(taskId, 'success', 'Monorepo 仓库克隆完成，请添加子项目');
+              rootDone = true;
+              break;
+            }
+            if (!rootDone) {
+              globalQueue.updateStatus(taskId, 'failed', '无法为 Monorepo 分配到可用本地目录（冲突过多）');
+            }
             return;
           }
 
@@ -766,7 +819,7 @@ router.post('/git-sync-global', async (req, res) => {
           globalQueue.updateStatus(taskId, 'processing', '正在拉取代码...');
 
           if (fs.existsSync(path.join(cloneDir, '.git'))) {
-            await execAsync(`git -C "${cloneDir}" pull`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+            await execAsync(`git -C "${cloneDir}" fetch --all && git -C "${cloneDir}" reset --hard origin/${branch}`, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
           } else {
             if (fs.existsSync(cloneDir)) {
               console.log(`[GitSync] 目标路径已存在但非 Git 仓库，正在清理: ${cloneDir}`);

@@ -1,5 +1,11 @@
 # 操作日志
 
+## 2026-04-30
+
+- **Monorepo 目录冲突自动避让**：`src/routes/prototypes.js` 新增 `pickMonorepoDiskFolderName`：在克隆前按库内 `path` 查询，若默认仓库目录已被非 `git-monorepo` 占用则改用 `仓库名-2`、`仓库名-3`…；已存在 `git-monorepo` 根则仍复用该目录。应用于 `autoMonorepo` 与 `syncMode === 'monorepoRoot'` 的拉取/克隆；任务文案提示「本地目录已避让为 …」；子项默认 slug 基数与父级展示名在无自定义时使用实际磁盘目录名。
+
+- **Monorepo 目录冲突仍报错加固**：`src/db/db.js` 的 `findPrototypeByPath` 增加路径规范化（`\`、`/`、首尾 `./` 与尾随 `/`），精确匹配失败时再比对规范化后的 `path`，避免库内记录与运行时 `path.relative` 字符串不一致导致预检漏判。`src/routes/prototypes.js` 去掉单独 `pickMonorepoDiskFolderName`，改为 `prototypeRelPathForDiskSegment` + 最多 200 轮槽位循环：克隆/拉取后若仍为「非 git-monorepo」占用则删除刚克隆目录并试下一目录名；失败文案改为「无法分配到可用本地目录」。`monorepoRoot` 同步路径同步加固。
+
 ## 2026-04-10
 
 - **构建 Permission denied**：`pipeline-utils.js` 增加 `ensureNpmBinExecutables`（为 `node_modules/.bin` 下文件及 symlink 目标补执行位），在 `installDependencies` 成功后、跳过安装分支进入构建前、以及 `buildProject` 内 `npm install` 与 `npm run build` 之间调用；`buildProject` 拆成两步 exec 以便在中间 chmod。缓解多子目录/卷挂载时 `vite` 等 `Permission denied`。

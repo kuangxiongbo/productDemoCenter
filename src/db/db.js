@@ -314,12 +314,28 @@ class PostgresDatabase {
         return res.rows.map((row) => this.mapPrototypeRow(row));
     }
 
+    /** 与运行时 path.relative 结果对齐，避免 \、尾随 /、./ 等与库内 path 不一致导致漏匹配 */
+    normalizePrototypePathKey(p) {
+        return String(p || '')
+            .trim()
+            .replace(/\\/g, '/')
+            .replace(/\/+/g, '/')
+            .replace(/^\.?\//, '')
+            .replace(/\/+$/, '');
+    }
+
     async findPrototypeByPath(path) {
+        if (path == null || String(path).trim() === '') return null;
         const res = await this.pool.query(
             'SELECT * FROM prototypes WHERE path = $1 LIMIT 1',
             [path]
         );
         if (res.rows[0]) return this.mapPrototypeRow(res.rows[0]);
+        const key = this.normalizePrototypePathKey(path);
+        const all = await this.pool.query('SELECT * FROM prototypes WHERE path IS NOT NULL AND trim(path) <> \'\'');
+        for (const row of all.rows) {
+            if (this.normalizePrototypePathKey(row.path) === key) return this.mapPrototypeRow(row);
+        }
         return null;
     }
 
