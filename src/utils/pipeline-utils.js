@@ -101,7 +101,9 @@ async function ensureNpmBinExecutables(projectPath) {
 async function installDependencies(projectPath, detection) {
   console.log(`[Pipeline] >>> 正在安装依赖: ${projectPath}...`);
   try {
-    const cmd = `nice -n 19 npm install --no-audit --no-fund`;
+    // --force：自动安装 peerDependencies（npm7+ 默认会装，--legacy-peer-deps 不会），
+    // 同时容忍 peer 版本冲突，保证「本地 npm install 能装的原型平台都能装」
+    const cmd = `nice -n 19 npm install --force --no-audit --no-fund`;
     await execAsync(cmd, { cwd: projectPath, timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
     await ensureNpmBinExecutables(projectPath);
     return { success: true };
@@ -129,7 +131,7 @@ async function buildProject(projectPath, detection, basePath = './') {
 
   try {
     console.log(`[Pipeline] [Local] 执行项目依赖安装与构建...`);
-    await execAsync('nice -n 19 npm install --legacy-peer-deps --no-audit --no-fund', {
+    await execAsync('nice -n 19 npm install --force --no-audit --no-fund', {
       cwd: projectPath,
       env: buildEnv,
       timeout: 1200000,

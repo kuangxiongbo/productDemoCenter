@@ -1,5 +1,9 @@
 # 操作日志
 
+## 2026-11-18
+
+- **构建依赖安装改为 `npm install --force`**：`ssl-vpn-client-setup-2` 构建报 `Rollup failed to resolve import "@peculiar/asn1-schema"`。根因：`@peculiar/x509` v3 起将 `@peculiar/asn1-schema` 从 dependencies 移到 peerDependencies，原型未显式声明；流水线两步安装 flag 不一致——`installDependencies` 裸 `npm install`（npm7+ 自动装 peer）装上了它，`buildProject` 里 `npm install --legacy-peer-deps`（npm6 行为，跳过 peer）重装时又将其裁剪，vite 构建即失败。`pipeline-utils.js` 两处安装统一改为 `npm install --force --no-audit --no-fund`：自动安装 peer 依赖（与开发者本地裸装行为一致），同时容忍 peer 版本冲突（保留原 `--legacy-peer-deps` 对老原型冲突的兼容）。已在隔离目录用 `@peculiar/x509@3.1.0` 验证：`--force` 安装含 peer，`--legacy-peer-deps` 会移除已装 peer。涉及服务器上 `ssl-vpn-client-setup`、`-1`、`-2` 三个已损坏的同步目录，重新编译即可修复，无需改原型 package.json。
+
 ## 2026-04-30
 
 - **Monorepo 目录冲突自动避让**：`src/routes/prototypes.js` 新增 `pickMonorepoDiskFolderName`：在克隆前按库内 `path` 查询，若默认仓库目录已被非 `git-monorepo` 占用则改用 `仓库名-2`、`仓库名-3`…；已存在 `git-monorepo` 根则仍复用该目录。应用于 `autoMonorepo` 与 `syncMode === 'monorepoRoot'` 的拉取/克隆；任务文案提示「本地目录已避让为 …」；子项默认 slug 基数与父级展示名在无自定义时使用实际磁盘目录名。
